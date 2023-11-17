@@ -33,10 +33,6 @@ const BikeStationList = () => {
     }, []); 
 
     return {bikeStations, isLoading, error};
-
-    // return (
-
-    // );
 };
 
 export default BikeStationList;
