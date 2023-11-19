@@ -7,7 +7,7 @@ const html_script = `
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	
-	<title>Quick Start - Leaflet</title>
+	<title>Map</title>
 	
 	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
 
@@ -20,7 +20,7 @@ const html_script = `
 			margin: 0;
 		}
 		.leaflet-container {
-			height: 400px;
+			height: 600px;
 			width: 600px;
 			max-width: 100%;
 			max-height: 100%;
@@ -33,7 +33,7 @@ const html_script = `
 
 
 
-<div id="map" style="width: 600px; height: 400px;"></div>
+<div id="map" style="width: 600px; height: 600px;"></div>
 <script>
 
 	const map = L.map('map').setView([52.2297, 21.0122], 13);
