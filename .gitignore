@@ -1,3 +1,6 @@
+#expo go files
+*/wasi
+
 # Xcode
 !**/*.xcodeproj
 !**/*.pbxproj
