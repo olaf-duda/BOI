@@ -1,54 +1,53 @@
-import { Text, View } from '../../components/Themed';
+import { Text } from '../../components/Themed';
 
-import React, { useRef, useCallback, useState } from 'react';
-import {TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, Pressable  } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 
 import html_script from '../html_script.js';
-import { MaterialIcons } from '@expo/vector-icons';
 
-import BikeStationList from '../../hook/bikeData';
+import useBikeStationList from '../../hook/bikeData';
+import { FlatList } from 'react-native-gesture-handler';
 
 export default function TabThreeScreen() {
-  const [stationAddress, setStationAddress] = useState('');
-  const {bikeStations, isLoading, error} = BikeStationList();
-
-  const handleStationAddress = useCallback( () => {
-    try {
-        console.log("starting the loop" + bikeStations.length);
-        bikeStations.forEach(station => {
-            console.log("processing\n");
-            goToMyPosition((station.geoCords.lat), (station.geoCords.lon)); // Update map with new coordinates
-        })
-        console.log("finished the loop");
-    } catch (error) {
-      console.error('Error fetching coordinates:', error);
-    }
-  }, [stationAddress]);
+  const {bikeStations, isLoading, error} = useBikeStationList();
 
   const mapRef = useRef<WebView | null>(null);
 
-  const goToMyPosition = (lat: number, lon: number) => {
-    if (mapRef.current) {
-      const script = `
-        if (typeof map !== 'undefined') {
-          map.setView([${lat}, ${lon}], 10);
-          L.marker([${lat}, ${lon}]).addTo(map);
-        }
-      `;
-      console.log("Station at:" + lat + lon + "\n");
-      mapRef.current.injectJavaScript(script);
-    }
+  const handleStationAddress = useCallback( () => {
+      try {
+          console.log("starting the loop")
+          bikeStations.forEach(station => {
+              goToMyPosition((station.geoCoords.lat), (station.geoCoords.lng)); // Update map with new coordinates
+          })
+      } catch (error) {
+      console.error('Error fetching coordinates:', error);
+      }
+  }, [bikeStations]);
+
+
+  const goToMyPosition = (lat: number, lng: number) => {
+      if (mapRef.current) {
+        const script = `
+            if (typeof map !== 'undefined') {
+              map.setView([${lat}, ${lng}], 10);
+            L.marker([${lat}, ${lng}]).addTo(map);
+            }
+        `;
+        console.log("Station at:" + lat + " " + lng + "\n");
+        mapRef.current.injectJavaScript(script);
+      }
   };
 
-  return (
-    <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.container}>
-        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} onLoad={handleStationAddress}/>
-      </SafeAreaView>
-    </>
-  );
+return (
+  <>
+    <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={styles.container}>
+      <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} onLoad={handleStationAddress}/>
+    </SafeAreaView>
+  </>
+);
 };
 
 const styles = StyleSheet.create({
@@ -100,11 +99,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  nullstyle: {
+    width: 0,
+    height: 0
+  }
 });
 
 
 // export default function TabOneScreen() {
-//   const {bikeStations, isLoading, error} = BikeStationList();
+//   const {bikeStations, isLoading, error} = useBikeStationList();
 
 //   return (
 //     <View style={styles.container}>
