@@ -1,14 +1,12 @@
-import { Text } from '../../components/Themed';
-
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, SafeAreaView, StatusBar } from 'react-native';
-import { Marker } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 
 import html_script from '../html_script.js';
 
 import useBikeStationList from '../../hook/bikeData';
-import { FlatList } from 'react-native-gesture-handler';
+
+import Station from '../../interfaces/Stations.js'
 
 export default function TabThreeScreen() {
   const {bikeStations, isLoading, error} = useBikeStationList();
@@ -18,7 +16,7 @@ export default function TabThreeScreen() {
   const handleStationAddress = useCallback( () => {
       try {
           console.log("starting the loop")
-          bikeStations.forEach(station => {
+          bikeStations.forEach((station : Station) => {
               goToMyPosition((station.geoCoords.lat), (station.geoCoords.lng)); // Update map with new coordinates
           })
       } catch (error) {
@@ -99,54 +97,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  nullstyle: {
-    width: 0,
-    height: 0
-  }
 });
-
-
-// export default function TabOneScreen() {
-//   const {bikeStations, isLoading, error} = useBikeStationList();
-
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Testuje sobie to</Text>
-//           <View 
-//            style={styles.container}
-//           >
-//             <Text>Bike Locations</Text>
-//             <FlatList
-//             data={bikeStations}
-//             keyExtractor={(item) => item.uid}
-//             renderItem={({ item }) => (
-//             <View style={{ marginBottom: 15 }}>
-//               <Text 
-//               style={{ fontWeight: 'bold' }}
-//               >{item.name} - Bike number: {item.bikes.length}</Text>
-//             </View>
-//             )}
-//              />
-//           </View>
-//       <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-//       <EditScreenInfo path="app/(tabs)/index.tsx" />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   title: {
-//     fontSize: 20,
-//     fontWeight: 'bold',
-//   },
-//   separator: {
-//     marginVertical: 30,
-//     height: 1,
-//     width: '80%',
-//   },
-// });
