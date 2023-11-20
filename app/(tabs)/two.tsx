@@ -8,7 +8,7 @@ export default function TabTwoScreen() {
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
 
-  
+
   const [coordinates, setCoordinates] = useState({ lat: 52.2297, lon: 21.0122 }); // Default coordinates
 
   const handleStartingAddressSubmit = useCallback(async () => {
@@ -69,10 +69,10 @@ export default function TabTwoScreen() {
             placeholder="Enter starting address"
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleStartingAddressSubmit}>
-          <Text> {/* Wrap the MaterialIcons component with Text */}
-            <MaterialIcons name="search" size={24} color="white" /> {/* MaterialIcons search icon */}
-          </Text>
-        </TouchableOpacity>
+            <Text> {/* Wrap the MaterialIcons component with Text */}
+              <MaterialIcons name="search" size={24} color="white" /> {/* MaterialIcons search icon */}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.addressInputContainer}>
@@ -83,12 +83,12 @@ export default function TabTwoScreen() {
             placeholder="Enter destination address"
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleDestinationAddressSubmit}>
-          <Text> {/* Wrap the MaterialIcons component with Text */}
-            <MaterialIcons name="search" size={24} color="white" /> {/* MaterialIcons search icon */}
-          </Text>
-        </TouchableOpacity>
+            <Text> {/* Wrap the MaterialIcons component with Text */}
+              <MaterialIcons name="search" size={24} color="white" /> {/* MaterialIcons search icon */}
+            </Text>
+          </TouchableOpacity>
         </View>
-        
+
         <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
         <View style={styles.buttonArea}>
           <TouchableOpacity style={styles.button} onPress={() => goToMyPosition(44.7866, 20.4489)}>
