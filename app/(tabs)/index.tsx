@@ -1,12 +1,37 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, TouchableOpacity, Image, Pressable } from 'react-native';
 
 import EditScreenInfo from '../../components/EditScreenInfo';
 import { Text, View } from '../../components/Themed';
 
+import { FlatList } from "react-native-gesture-handler";
+
+import BikeStationList from '../../hook/bikeData'
+
+
 export default function TabOneScreen() {
+  const {bikeStations, isLoading, error} = BikeStationList();
+
+  console.log(bikeStations);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Na pierwszym miejscu Bóg</Text>
+      <Text style={styles.title}>Testuje sobie to</Text>
+          <View 
+           style={styles.container}
+          >
+            <Text>Bike Locations</Text>
+            <FlatList
+            data={bikeStations}
+            keyExtractor={(item) => item.uid}
+            renderItem={({ item }) => (
+            <View style={{ marginBottom: 15 }}>
+              <Text 
+              style={{ fontWeight: 'bold' }}
+              >{item.name} - Bike number: {item.bikes.length}</Text>
+            </View>
+            )}
+             />
+          </View>
       <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
       <EditScreenInfo path="app/(tabs)/index.tsx" />
     </View>

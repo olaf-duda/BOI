@@ -6,8 +6,8 @@ declare module "expo-router" {
   import type { Router as OriginalRouter } from 'expo-router/src/types';
   export * from 'expo-router/build';
 
-  // prettier-ignore
   type StaticRoutes = `/` | `/(tabs)/` | `/(tabs)` | `/(tabs)/two` | `/two` | `/(tabs)/_layout` | `/_layout` | `/+html` | `/modal`;
+
   // prettier-ignore
   type DynamicRoutes<T extends string> = `/${CatchAllRoutePart<T>}`;
   // prettier-ignore
