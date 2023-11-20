@@ -5,13 +5,12 @@ import { Text, View } from '../../components/Themed';
 
 import { FlatList } from "react-native-gesture-handler";
 
-import BikeStationList from '../../hook/bikeData'
+import useBikeStationList from '../../hook/bikeData'
 
+import Station from '../../interfaces/Stations.js'
 
 export default function TabOneScreen() {
-  const {bikeStations, isLoading, error} = BikeStationList();
-
-  console.log(bikeStations);
+  const {bikeStations, isLoading, error} = useBikeStationList();
 
   return (
     <View style={styles.container}>
@@ -22,12 +21,14 @@ export default function TabOneScreen() {
             <Text>Bike Locations</Text>
             <FlatList
             data={bikeStations}
-            keyExtractor={(item) => item.uid}
+            keyExtractor={(item: Station) => item.uid.toString()}
+
             renderItem={({ item }) => (
             <View style={{ marginBottom: 15 }}>
               <Text 
               style={{ fontWeight: 'bold' }}
-              >{item.name} - Bike number: {item.bikes.length}</Text>
+              >{item.name } - Bike number: {item.bikes.length}</Text>
+
             </View>
             )}
              />
