@@ -1,5 +1,7 @@
+
 #expo go files
 */wasi
+.github/workflows
 
 # Xcode
 !**/*.xcodeproj
