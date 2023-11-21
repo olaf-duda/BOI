@@ -20,6 +20,7 @@ const useBikeStationList =  () => {
                 },
             });
             setBikeStations(response.data[0].cities[0].places);
+            console.log(bikeStations.length)
             setIsLoading(false);
         } catch (error) {
             console.error('Error:', error);
@@ -31,7 +32,7 @@ const useBikeStationList =  () => {
         fetchData();
     }, []);
 
-    return {bikeStations, isLoading, error};
+    return {bikeStations, isLoading, error, fetchData};
 };
 
 export default useBikeStationList;

@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -9,19 +9,19 @@ import useBikeStationList from '../../hook/bikeData';
 import Station from '../../interfaces/Stations.js'
 
 export default function TabThreeScreen() {
-  const {bikeStations, isLoading, error} = useBikeStationList();
+  const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
 
   const mapRef = useRef<WebView | null>(null);
 
   const handleStationAddress = useCallback( () => {
-      try {
-          console.log("starting the loop")
-          bikeStations.forEach((station : Station) => {
-              goToMyPosition((station.geoCoords.lat), (station.geoCoords.lng)); // Update map with new coordinates
-          })
-      } catch (error) {
+    console.log("starting the loop")
+    try {
+      bikeStations.forEach((station : Station) => {
+          goToMyPosition((station.geoCoords.lat), (station.geoCoords.lng)); // Update map with new coordinates
+      })
+    } catch (error) {
       console.error('Error fetching coordinates:', error);
-      }
+    }
   }, [bikeStations]);
 
 
@@ -29,7 +29,6 @@ export default function TabThreeScreen() {
       if (mapRef.current) {
         const script = `
             if (typeof map !== 'undefined') {
-              map.setView([${lat}, ${lng}], 10);
             L.marker([${lat}, ${lng}]).addTo(map);
             }
         `;
@@ -37,6 +36,10 @@ export default function TabThreeScreen() {
         mapRef.current.injectJavaScript(script);
       }
   };
+
+  useEffect(() => {
+    handleStationAddress();
+  }, [bikeStations])
 
 return (
   <>
