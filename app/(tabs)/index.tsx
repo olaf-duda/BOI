@@ -1,10 +1,19 @@
 import React, { useRef, useCallback, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, Button, StatusBar, TextInput } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, Button, StatusBar, TextInput, Image, Pressable } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+
+import EditScreenInfo from '../../components/EditScreenInfo';
+
+
+import { FlatList } from "react-native-gesture-handler";
+
+import useBikeStationList from '../../hook/bikeData'
+
+import Station from '../../interfaces/Stations.js'
 
 export default function TabOneScreen() {
   const [startingAddress, setStartingAddress] = useState('');
@@ -78,7 +87,6 @@ export default function TabOneScreen() {
         </TouchableOpacity>
       </SafeAreaView>
     </>
-
   );
 }
 
