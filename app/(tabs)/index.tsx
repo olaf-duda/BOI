@@ -16,57 +16,10 @@ import useBikeStationList from '../../hook/bikeData'
 import Station from '../../interfaces/Stations.js'
 
 export default function TabOneScreen() {
-  const [startingAddress, setStartingAddress] = useState('');
-  const [destinationAddress, setDestinationAddress] = useState('');
+ 
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
 
-  const [coordinates, setCoordinates] = useState({ lat: 52.2297, lon: 21.0122 }); // Default coordinates
-
-  const handleStartingAddressSubmit = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startingAddress)}`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0]; // Get latitude and longitude
-        setCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        goToMyPosition(parseFloat(lat), parseFloat(lon)); // Update map with new coordinates
-      }
-    } catch (error) {
-      console.error('Error fetching coordinates:', error);
-    }
-  }, [startingAddress]);
-
-  const handleDestinationAddressSubmit = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destinationAddress)}`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0]; // Get latitude and longitude
-        setCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        goToMyPosition(parseFloat(lat), parseFloat(lon)); // Update map with new coordinates
-      }
-    } catch (error) {
-      console.error('Error fetching coordinates:', error);
-    }
-  }, [destinationAddress]);
-
   const mapRef = useRef<WebView | null>(null);
-
-  const goToMyPosition = (lat: number, lon: number) => {
-    if (mapRef.current) {
-      const script = `
-        if (typeof map !== 'undefined') {
-          map.setView([${lat}, ${lon}], 10);
-          L.marker([${lat}, ${lon}]).addTo(map);
-        }
-      `;
-      mapRef.current.injectJavaScript(script);
-    }
-  };
 
   type RootTabParamList = {
     index: undefined;

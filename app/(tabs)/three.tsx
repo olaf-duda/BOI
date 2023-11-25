@@ -17,19 +17,19 @@ export default function TabThreeScreen() {
     console.log("starting the loop")
     try {
       bikeStations.forEach((station : Station) => {
-          goToMyPosition((station.geoCoords.lat), (station.geoCoords.lng)); // Update map with new coordinates
-      })
+        addStationMarker((station.geoCoords.lat), (station.geoCoords.lng), station.name,station.bikes.length); // Update map with new coordinates
+    })
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
   }, [bikeStations]);
 
 
-  const goToMyPosition = (lat: number, lng: number) => {
+  const addStationMarker = (lat: number, lng: number, name: string,  bikes: number) => {
       if (mapRef.current) {
         const script = `
             if (typeof map !== 'undefined') {
-            L.marker([${lat}, ${lng}]).addTo(map);
+            L.marker([${lat}, ${lng}]).addTo(map).bindPopup('<b>${name}</b><br />Available bikes: ${bikes}');
             }
         `;
         console.log("Station at:" + lat + " " + lng + "\n");
