@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
@@ -13,10 +13,13 @@ export default function TabTwoScreen() {
   const [destinationAddress, setDestinationAddress] = useState('');
   const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
+  const [routeTime, setRouteTime] = useState(10);
 
   const mapRef = useRef<WebView | null>(null);
-
-  const handleStandardRoute =  () => {
+  useEffect(() => {
+    //console.log("Updated Route Time:", routeTime);
+  }, [routeTime]);
+  const handleBalancedRoute =  () => {
     findRoute("TRIANGLE");
   }
 
@@ -143,6 +146,11 @@ export default function TabTwoScreen() {
       });
 
       const legs = response.data.data.plan.itineraries[0].legs;
+
+      let durationInMinutes = (response.data.data.plan.itineraries[0].endTime-response.data.data.plan.itineraries[0].startTime)/ (1000 * 60);
+      setRouteTime(Math.round(durationInMinutes));
+      //console.log("Duration:", durationInMinutes, routeTime);
+
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -191,6 +199,7 @@ export default function TabTwoScreen() {
     }
   }
 
+
   const addNewMarker = (lat: number, lon: number) => {
     if (mapRef.current) {
       const script = `
@@ -234,11 +243,14 @@ export default function TabTwoScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
+        
         <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
+        <View style={styles.durationContainer}>
+          <Text style={styles.durationText}>Route time: {routeTime} minutes</Text>
+        </View>
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.button} onPress={handleStandardRoute}>
-            <Text style={styles.buttonText}>Standard route</Text>
+          <TouchableOpacity style={styles.button} onPress={handleBalancedRoute}>
+            <Text style={styles.buttonText}>Balanced route</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={handleFastRoute}>
             <Text style={styles.buttonText}>Fast route</Text>
@@ -256,6 +268,16 @@ export default function TabTwoScreen() {
 };
 
 const styles = StyleSheet.create({
+  durationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 5,
+  },
+  durationText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
+  },
   container: {
     flex: 1,
     backgroundColor: 'grey',
@@ -270,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    width: 80,
+    width: 85,
     padding: 10,
     borderRadius: 10,
     backgroundColor: 'black',
