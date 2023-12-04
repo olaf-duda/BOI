@@ -43,7 +43,9 @@ function decode(point_str) {
         points.push([parseFloat(prev_x.toFixed(6)), parseFloat(prev_y.toFixed(6))]);
     }
 
+
     //console.log(points);
+
     return points;
 }
 
