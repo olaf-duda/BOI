@@ -46,7 +46,7 @@ const html_script = `
 	const marker = L.marker([51.5, -0.09]).addTo(map)
 		.bindPopup('<b>Hello world!</b><br />I am a popup.').openPopup();
 
-	const circle = L.circle([51.508, -0.11], {
+	const circle = L.circle([51.2297, 21.0122], {
 		color: 'red',
 		fillColor: '#f03',
 		fillOpacity: 0.5,
