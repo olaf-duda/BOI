@@ -1,4 +1,4 @@
-function decode(point_str) {
+export function decode(point_str) {
 
     let coord_chunks = [[]];
     for (let i = 0; i < point_str.length; i++) {
@@ -43,10 +43,46 @@ function decode(point_str) {
         points.push([parseFloat(prev_x.toFixed(6)), parseFloat(prev_y.toFixed(6))]);
     }
 
-
-    //console.log(points);
-
     return points;
 }
+export function encode(coords) {
+    let encoded_str = "";
+    let prev_x = 0;
+    let prev_y = 0;
 
-export default decode;
+    for (let i = 0; i < coords.length; i++) {
+        let x = coords[i][0];
+        let y = coords[i][1];
+
+        let delta_x = x - prev_x;
+        let delta_y = y - prev_y;
+
+        delta_x = parseFloat(delta_x.toFixed(6));
+        delta_y = parseFloat(delta_y.toFixed(6));
+
+        prev_x = x;
+        prev_y = y;
+
+        let value_x = Math.round(delta_x * 100000);
+        let value_y = Math.round(delta_y * 100000);
+
+        encoded_str += encodeSingleValue(value_y);
+        encoded_str += encodeSingleValue(value_x);
+    }
+
+    return encoded_str;
+}
+
+// Function to encode a single value
+function encodeSingleValue(value) {
+    value = value < 0 ? ~(value << 1) : value << 1;
+    let encoded = "";
+
+    while (value >= 0x20) {
+        encoded += String.fromCharCode((0x20 | (value & 0x1F)) + 63);
+        value >>= 5;
+    }
+
+    encoded += String.fromCharCode(value + 63);
+    return encoded;
+}

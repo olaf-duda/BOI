@@ -11,15 +11,15 @@ import decode from '../../algorithms/polyline.js'
 export default function TabTwoScreen() {
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
-  const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 }); 
+  const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
 
   const mapRef = useRef<WebView | null>(null);
 
   const handleGraphQLQuery = async () => {
     try {
-      const apiUrl = 'http://192.168.230.83:8080/otp/routers/default/index/graphql'; 
-  
+      const apiUrl = 'http://192.168.43.62:8081/otp/routers/default/index/graphql';
+
       const requestBody = {
         query: `{
           plan(
@@ -71,13 +71,13 @@ export default function TabTwoScreen() {
           }
       }`
       };
-  
+
       const response = await axios.post(apiUrl, requestBody, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-  
+
       const legs = response.data.data.plan.itineraries[0].legs;
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
@@ -85,17 +85,17 @@ export default function TabTwoScreen() {
         for (let i = 0; i < points.length - 1; i++) {
           const [lat1, lon1] = points[i];
           const [lat2, lon2] = points[i + 1];
-          drawLineBetweenPoints( lon1, lat1, lon2, lat2 );
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2);
         }
       });
-      
-    return response.data; 
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    return null;
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return null;
+    }
   }
-}
-  
+
   const handleStartingAddressSubmit = useCallback(async () => {
     try {
       const response = await fetch(
@@ -103,7 +103,7 @@ export default function TabTwoScreen() {
       );
       const data = await response.json();
       if (data && data.length > 0) {
-        const { lat, lon } = data[0]; 
+        const { lat, lon } = data[0];
         setStartingCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
         goToMyPosition(parseFloat(lat), parseFloat(lon));
       }
@@ -119,7 +119,7 @@ export default function TabTwoScreen() {
       );
       const data = await response.json();
       if (data && data.length > 0) {
-        const { lat, lon } = data[0]; 
+        const { lat, lon } = data[0];
         setDestinationCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
         goToMyPosition(parseFloat(lat), parseFloat(lon));
       }
@@ -156,7 +156,7 @@ export default function TabTwoScreen() {
 
   return (
     <>
-    
+
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.addressInputContainer}>
@@ -167,8 +167,8 @@ export default function TabTwoScreen() {
             placeholder="Enter starting address"
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleStartingAddressSubmit}>
-            <Text> {}
-              <MaterialIcons name="search" size={24} color="white" /> {}
+            <Text> { }
+              <MaterialIcons name="search" size={24} color="white" /> { }
             </Text>
           </TouchableOpacity>
         </View>
@@ -181,18 +181,18 @@ export default function TabTwoScreen() {
             placeholder="Enter destination address"
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleDestinationAddressSubmit}>
-            <Text> {}
-              <MaterialIcons name="search" size={24} color="white" /> {}
+            <Text> { }
+              <MaterialIcons name="search" size={24} color="white" /> { }
             </Text>
           </TouchableOpacity>
         </View>
 
-        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
+        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} testID="webView" />
         <View style={styles.buttonArea}>
           <TouchableOpacity style={styles.button} onPress={handleGraphQLQuery}>
-          <Text style={styles.buttonText}>szukaj trase</Text>
+            <Text style={styles.buttonText}>szukaj trase</Text>
           </TouchableOpacity>
-          
+
         </View>
       </SafeAreaView>
     </>
