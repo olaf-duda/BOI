@@ -1,42 +1,130 @@
-import React, { useRef, useCallback, useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Alert } from 'react-native';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, PermissionsAndroid } from 'react-native';
 import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import decode from '../../algorithms/polyline.js'
-
+import * as Location from 'expo-location';
 
 
 export default function TabTwoScreen() {
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
-  const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 }); 
+  const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
-
+  const [routeTime, setRouteTime] = useState(10);
+  const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
-
-  const handleGraphQLQuery = async () => {
-    try {
-      const apiUrl = 'http://192.168.230.83:8080/otp/routers/default/index/graphql'; 
   
+  const handleBalancedRoute = () => {
+    findRoute("TRIANGLE");
+    setSelectedRoute("TRIANGLE");
+  }
+
+  const handleFastRoute = () => {
+    findRoute("QUICK");
+    setSelectedRoute("QUICK");
+  }
+
+  const handleSafeRoute = () => {
+    findRoute("SAFE");
+    setSelectedRoute("SAFE");
+  }
+
+  const handleFlatRoute = () => {
+    findRoute("FLAT");
+    setSelectedRoute("FLAT");
+
+  }
+
+  const handleStartingAddressSubmit = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startingAddress)}`
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setStartingCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
+        addNewMarker(parseFloat(lat), parseFloat(lon), true);
+      }
+    } catch (error) {
+      console.error('Error fetching coordinates:', error);
+    }
+  }, [startingAddress]);
+
+  const handleDestinationAddressSubmit = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destinationAddress)}`
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setDestinationCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
+        addNewMarker(parseFloat(lat), parseFloat(lon), false);
+      }
+    } catch (error) {
+      console.error('Error fetching coordinates:', error);
+    }
+  }, [destinationAddress]);
+
+  const handleSetStartingLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.error('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      setStartingCoordinates({ lat: latitude, lon: longitude });
+      setStartingAddress("Your localization")
+      addNewMarker(latitude, longitude, true);
+    } catch (error) {
+      console.error('Error getting location:', error);
+    }
+  };
+
+  const findRoute = async (routeType: string) => {
+    try {
+      clearMap();
+
+      const apiUrl = 'http://192.168.230.83:8080/otp/routers/default/index/graphql';
+
+      // Use the current date and time in the GraphQL query
+      const now = new Date();
+      const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
+        .getMinutes()
+        .toString()
+        .padStart(2, '0')}`;
+
+      let triangle = "";
+      if (routeType == "TRIANGLE") {
+        triangle = `triangle : {
+          safetyFactor: 0.33, 
+          slopeFactor: 0.33, 
+          timeFactor: 0.34}`;
+      }
       const requestBody = {
         query: `{
-          plan(
-              # these coordinate are in Portland, change this to YOUR origin
-              from: { lat: ${startingCoordinates.lat}, lon: ${startingCoordinates.lon} }
-              # these coordinate are in Portland, change this to YOUR destination
-              to: { lat: ${destinationCoordinates.lat}, lon: ${destinationCoordinates.lon} }
-              # use the correct date and time of your request
-              date: "2023-02-15",
-              time: "11:37",
-              # choose the transport modes you need
-              transportModes: [
-                  {
-                      mode: BICYCLE
-                  },
-                  
-              ]) {
+        plan(
+            optimize: ${routeType}
+            ${triangle}
+            from: { lat: ${startingCoordinates.lat}, lon: ${startingCoordinates.lon} }
+            to: { lat: ${destinationCoordinates.lat}, lon: ${destinationCoordinates.lon} }
+            date: "${currentDate}",
+            time: "${currentTime}",
+            transportModes: [
+                {
+                    mode: BICYCLE
+                },
+            ]) {
               itineraries {
                   startTime
                   endTime
@@ -71,63 +159,58 @@ export default function TabTwoScreen() {
           }
       }`
       };
-  
+
       const response = await axios.post(apiUrl, requestBody, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-  
+
       const legs = response.data.data.plan.itineraries[0].legs;
+
+      let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
+      setRouteTime(Math.round(durationInMinutes));
+      //console.log("Duration:", durationInMinutes, routeTime);
+
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
         for (let i = 0; i < points.length - 1; i++) {
+
           const [lat1, lon1] = points[i];
           const [lat2, lon2] = points[i + 1];
-          drawLineBetweenPoints( lon1, lat1, lon2, lat2 );
+
+
+
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2);
         }
       });
-      
-    return response.data; 
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    return null;
+      addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
+      addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
+
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return null;
+    }
   }
-}
-  
-  const handleStartingAddressSubmit = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startingAddress)}`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0]; 
-        setStartingCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        goToMyPosition(parseFloat(lat), parseFloat(lon));
-      }
-    } catch (error) {
-      console.error('Error fetching coordinates:', error);
-    }
-  }, [startingAddress]);
 
-  const handleDestinationAddressSubmit = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destinationAddress)}`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const { lat, lon } = data[0]; 
-        setDestinationCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        goToMyPosition(parseFloat(lat), parseFloat(lon));
-      }
-    } catch (error) {
-      console.error('Error fetching coordinates:', error);
+  const clearMap = () => {
+    // Clear the map - Remove all overlays (polylines and markers)
+    if (mapRef.current) {
+      const clearMapScript = `
+        if (typeof map !== 'undefined') {
+          map.eachLayer((layer) => {
+            if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+              map.removeLayer(layer);
+            }
+          });
+        }
+      `;
+      mapRef.current.injectJavaScript(clearMapScript);
     }
-  }, [destinationAddress]);
-
+  }
 
   const drawLineBetweenPoints = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     if (mapRef.current) {
@@ -142,21 +225,35 @@ export default function TabTwoScreen() {
     }
   }
 
-  const goToMyPosition = (lat: number, lon: number) => {
+  const addNewMarker = (lat: number, lon: number, isStarting: boolean) => {
     if (mapRef.current) {
-      const script = `
+      let script ='';
+      if(isStarting == true) {
+        script = `
         if (typeof map !== 'undefined') {
-          map.setView([${lat}, ${lon}], 10);
-          L.marker([${lat}, ${lon}]).addTo(map);
+          map.setView([${lat}, ${lon}], 13);
+          L.marker([${lat}, ${lon}]).addTo(map).bindPopup('<b>Starting point</b> <br/> ${startingAddress}');
+          
         }
       `;
+      }
+      else {
+        script = `
+        if (typeof map !== 'undefined') {
+          map.setView([${lat}, ${lon}], 13);
+          L.marker([${lat}, ${lon}]).addTo(map).bindPopup('<b>Destination point</b> <br/> ${destinationAddress}');
+          
+        }
+      `;
+      }
       mapRef.current.injectJavaScript(script);
     }
   };
 
+
+
   return (
     <>
-    
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.addressInputContainer}>
@@ -166,9 +263,14 @@ export default function TabTwoScreen() {
             value={startingAddress}
             placeholder="Enter starting address"
           />
+          <TouchableOpacity style={styles.iconButton} onPress={handleSetStartingLocation}>
+            <Text style={styles.buttonText}>
+              <MaterialIcons name="home" size={24} color="white" /> 
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={handleStartingAddressSubmit}>
-            <Text> {}
-              <MaterialIcons name="search" size={24} color="white" /> {}
+            <Text> 
+              <MaterialIcons name="search" size={24} color="white" /> 
             </Text>
           </TouchableOpacity>
         </View>
@@ -181,18 +283,43 @@ export default function TabTwoScreen() {
             placeholder="Enter destination address"
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleDestinationAddressSubmit}>
-            <Text> {}
-              <MaterialIcons name="search" size={24} color="white" /> {}
+            <Text> { }
+              <MaterialIcons name="search" size={24} color="white" /> { }
             </Text>
           </TouchableOpacity>
         </View>
 
         <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
+        <View style={styles.durationContainer}>
+          {selectedRoute && (
+            <Text style={styles.durationText}>Route time: {routeTime} minutes</Text>
+          )}
+        </View> 
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.button} onPress={handleGraphQLQuery}>
-          <Text style={styles.buttonText}>szukaj trase</Text>
+          <TouchableOpacity
+            style={[styles.button, selectedRoute === 'TRIANGLE' && styles.selectedButton]} 
+            onPress={handleBalancedRoute}
+          >
+            <Text style={styles.buttonText}>Balanced route</Text>
           </TouchableOpacity>
-          
+          <TouchableOpacity
+            style={[styles.button, selectedRoute === 'QUICK' && styles.selectedButton]}
+            onPress={handleFastRoute}
+          >
+            <Text style={styles.buttonText}>Fast route</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, selectedRoute === 'SAFE' && styles.selectedButton]} 
+            onPress={handleSafeRoute}
+          >
+            <Text style={styles.buttonText}>Safe route</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, selectedRoute === 'FLAT' && styles.selectedButton]} 
+            onPress={handleFlatRoute}
+          >
+            <Text style={styles.buttonText}>Flat route</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </>
@@ -200,6 +327,16 @@ export default function TabTwoScreen() {
 };
 
 const styles = StyleSheet.create({
+  durationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  durationText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
+  },
   container: {
     flex: 1,
     backgroundColor: 'grey',
@@ -208,17 +345,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonArea: {
-    flex: 0.3,
+    flex: 0.2,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
   button: {
-    width: 80,
+    width: 85,
     padding: 10,
     borderRadius: 10,
     backgroundColor: 'black',
     alignItems: 'center',
+  },
+  selectedButton: {
+    backgroundColor: 'blue', // Change the color for the selected route
   },
   buttonText: {
     color: 'white',
