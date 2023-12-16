@@ -16,7 +16,7 @@ import useBikeStationList from '../../hook/bikeData.js'
 import Station from '../../interfaces/Stations.js'
 
 export default function TabOneScreen() {
- 
+
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
 
   const mapRef = useRef<WebView | null>(null);
@@ -31,7 +31,7 @@ export default function TabOneScreen() {
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safeArea}>
-        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
+        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} testID='webView' />
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate('two')}

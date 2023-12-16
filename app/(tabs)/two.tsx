@@ -179,9 +179,6 @@ export default function TabTwoScreen() {
 
           const [lat1, lon1] = points[i];
           const [lat2, lon2] = points[i + 1];
-
-
-
           drawLineBetweenPoints(lon1, lat1, lon2, lat2);
         }
       });
@@ -288,7 +285,6 @@ export default function TabTwoScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
         <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
         <View style={styles.durationContainer}>
           {selectedRoute && (
