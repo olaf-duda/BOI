@@ -25,6 +25,9 @@ const html_script = `
 			max-width: 100%;
 			max-height: 100%;
 		}
+		.leaflet-control-attribution {
+            display: none !important;
+        }
 	</style>
 
 	
@@ -40,7 +43,7 @@ const html_script = `
 
 	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,
-		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+		attribution: null
 	}).addTo(map);
 
 	const marker = L.marker([51.5, -0.09]).addTo(map)

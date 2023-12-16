@@ -6,12 +6,12 @@ import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
-import EditScreenInfo from '../../components/EditScreenInfo';
+import EditScreenInfo from '../../components/EditScreenInfo.js';
 
 
 import { FlatList } from "react-native-gesture-handler";
 
-import useBikeStationList from '../../hook/bikeData'
+import useBikeStationList from '../../hook/bikeData.js'
 
 import Station from '../../interfaces/Stations.js'
 

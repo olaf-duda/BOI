@@ -4,7 +4,7 @@ import { WebView } from 'react-native-webview';
 
 import html_script from '../html_script.js';
 
-import useBikeStationList from '../../hook/bikeData';
+import useBikeStationList from '../../hook/bikeData.js';
 
 import Station from '../../interfaces/Stations.js'
 
