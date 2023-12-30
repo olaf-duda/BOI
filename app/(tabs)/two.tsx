@@ -18,13 +18,11 @@ export default function TabTwoScreen() {
   const [destinationAddress, setDestinationAddress] = useState('');
   const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
-  const [routeTime, setRouteTime] = useState(10);
   const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
   const otpApiUrl = 'http://192.168.0.101:8080/otp/routers/default/index/graphql';
   const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
-
-
+  const [routeTime, setRouteTime] = useState(0);
   
   const handleBalancedRoute = () => {
     findRoute("TRIANGLE");
@@ -97,32 +95,28 @@ export default function TabTwoScreen() {
     }
   };
 
-
-
   const findRoute = async (bicycleRouteType: string) => {
     try {
       clearMap();
+      setRouteTime(0);
+
       if (bikeStations && bikeStations.length > 0) {
-        // Preprocess stations to extract only coordinates
         const stationCoordinates = bikeStations.map((station: Station) => [
           station.geoCoords.lat,
           station.geoCoords.lng,
         ]);
-        // Create KD-tree with station coordinates
         const kdTree = new KDTree(stationCoordinates);
-        // Find nearest neighbors for a specific query point
         const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
         const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
         otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red");
-
         otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue")
-
         otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red");
 
-        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
         addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
-
+        addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
+        addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, false);
+        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
       }
       return 1;
     } catch (error) {
@@ -205,7 +199,7 @@ export default function TabTwoScreen() {
       });
       const legs = response.data.data.plan.itineraries[0].legs;
       let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
-      setRouteTime(Math.round(durationInMinutes));
+      setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
@@ -271,8 +265,6 @@ export default function TabTwoScreen() {
       mapRef.current.injectJavaScript(script);
     }
   };
-
-
 
   return (
     <>
