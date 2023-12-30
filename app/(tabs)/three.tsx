@@ -27,22 +27,23 @@ export default function TabThreeScreen() {
       // Find nearest neighbors for a specific query point
       const queryPoint = [52.2345, 21.0123]; // Replace this with your query point
       const nearest = kdTree.findNearestNeighbors(queryPoint, 5);
-      console.warn(nearest);
+      
+      console.log(nearest);
       if (mapRef.current) {
         const script = `
             if (typeof map !== 'undefined') {
               L.circle([${queryPoint[0]}, ${queryPoint[1]}],{
                 color: 'red'}).addTo(map)
               .bindPopup('start').openPopup();
-              L.circle([${nearest[0][0]}, ${nearest[0][1]}]).addTo(map)
+              L.circle([${nearest[0].lat}, ${nearest[0].lon}]).addTo(map)
               .bindPopup('neighbour').openPopup();
-              L.circle([${nearest[1][0]}, ${nearest[1][1]}]).addTo(map)
+              L.circle([${nearest[1].lat}, ${nearest[1].lon}]).addTo(map)
               .bindPopup('neighbour').openPopup();
-              L.circle([${nearest[2][0]}, ${nearest[2][1]}]).addTo(map)
+              L.circle([${nearest[2].lat}, ${nearest[2].lon}]).addTo(map)
               .bindPopup('neighbour').openPopup();
-              L.circle([${nearest[3][0]}, ${nearest[3][1]}]).addTo(map)
+              L.circle([${nearest[3].lat}, ${nearest[3].lon}]).addTo(map)
               .bindPopup('neighbour').openPopup();
-              L.circle([${nearest[4][0]}, ${nearest[4][1]}]).addTo(map)
+              L.circle([${nearest[4].lat}, ${nearest[4].lon}]).addTo(map)
               .bindPopup('neighbour').openPopup();
             }
         `;

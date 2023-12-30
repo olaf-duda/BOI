@@ -4,8 +4,13 @@ import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
-import decode from '../../algorithms/polyline.js'
+import {decode} from '../../algorithms/polyline.js'
 import * as Location from 'expo-location';
+import  KDTree  from '../../algorithms/kdtree.js';
+import Station from '../../interfaces/Stations.js'
+import useBikeStationList from '../../hook/bikeData.js';
+
+
 
 
 export default function TabTwoScreen() {
@@ -16,6 +21,10 @@ export default function TabTwoScreen() {
   const [routeTime, setRouteTime] = useState(10);
   const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
+  const otpApiUrl = 'http://192.168.0.101:8080/otp/routers/default/index/graphql';
+  const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
+
+
   
   const handleBalancedRoute = () => {
     findRoute("TRIANGLE");
@@ -88,14 +97,43 @@ export default function TabTwoScreen() {
     }
   };
 
-  const findRoute = async (routeType: string) => {
+
+
+  const findRoute = async (bicycleRouteType: string) => {
     try {
       clearMap();
+      if (bikeStations && bikeStations.length > 0) {
+        // Preprocess stations to extract only coordinates
+        const stationCoordinates = bikeStations.map((station: Station) => [
+          station.geoCoords.lat,
+          station.geoCoords.lng,
+        ]);
+        // Create KD-tree with station coordinates
+        const kdTree = new KDTree(stationCoordinates);
+        // Find nearest neighbors for a specific query point
+        const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
+        const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
-      const apiUrl = 'http://192.168.230.83:8080/otp/routers/default/index/graphql';
+        otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red");
 
-      // Use the current date and time in the GraphQL query
-      const now = new Date();
+        otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue")
+
+        otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red");
+
+        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
+        addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
+
+      }
+      return 1;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return null;
+    }
+  }
+
+  const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: {lat: number, lon: number}, 
+    destinationCoordinates:  {lat: number, lon: number}, color: string) => {
+    const now = new Date();
       const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1)
         .toString()
         .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
@@ -105,7 +143,7 @@ export default function TabTwoScreen() {
         .padStart(2, '0')}`;
 
       let triangle = "";
-      if (routeType == "TRIANGLE") {
+      if (bicycleRouteType == "TRIANGLE") {
         triangle = `triangle : {
           safetyFactor: 0.33, 
           slopeFactor: 0.33, 
@@ -114,7 +152,7 @@ export default function TabTwoScreen() {
       const requestBody = {
         query: `{
         plan(
-            optimize: ${routeType}
+            optimize: ${bicycleRouteType}
             ${triangle}
             from: { lat: ${startingCoordinates.lat}, lon: ${startingCoordinates.lon} }
             to: { lat: ${destinationCoordinates.lat}, lon: ${destinationCoordinates.lon} }
@@ -122,7 +160,7 @@ export default function TabTwoScreen() {
             time: "${currentTime}",
             transportModes: [
                 {
-                    mode: BICYCLE
+                    mode: ${travelType}
                 },
             ]) {
               itineraries {
@@ -159,38 +197,25 @@ export default function TabTwoScreen() {
           }
       }`
       };
-
-      const response = await axios.post(apiUrl, requestBody, {
+      
+      const response = await axios.post(otpApiUrl, requestBody, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
       const legs = response.data.data.plan.itineraries[0].legs;
-
       let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
       setRouteTime(Math.round(durationInMinutes));
-      //console.log("Duration:", durationInMinutes, routeTime);
 
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
         for (let i = 0; i < points.length - 1; i++) {
-
           const [lat1, lon1] = points[i];
           const [lat2, lon2] = points[i + 1];
-          drawLineBetweenPoints(lon1, lat1, lon2, lat2);
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
       });
-      addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
-      addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
-
-
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      return null;
-    }
   }
 
   const clearMap = () => {
@@ -209,12 +234,12 @@ export default function TabTwoScreen() {
     }
   }
 
-  const drawLineBetweenPoints = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const drawLineBetweenPoints = (lat1: number, lon1: number, lat2: number, lon2: number, color: string) => {
     if (mapRef.current) {
       const script = `
         if (typeof map !== 'undefined') {
           const polyline = L.polyline([[${lat1}, ${lon1}],[${lat2}, ${lon2}]], {
-            color: 'blue'
+            color: '${color}',
           }).addTo(map);
         }
       `;

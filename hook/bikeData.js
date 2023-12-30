@@ -8,7 +8,7 @@ import { FlatList } from "react-native-gesture-handler";
 
 // We for now read from a local file instead of API
  //const apiKey = 'xEsFhYZR5jpO1Ug1';
- const apiUrl = `https://5948-85-115-214-47.ngrok-free.app`;
+ const apiUrl = `https://5a06-85-115-214-47.ngrok-free.app`;
 
 const useBikeStationList =  () => {
     const [bikeStations, setBikeStations] = useState([]);
