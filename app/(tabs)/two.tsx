@@ -10,7 +10,7 @@ import  KDTree  from '../../algorithms/kdtree.js';
 import Station from '../../interfaces/Stations.js'
 import useBikeStationList from '../../hook/bikeData.js';
 
-
+import '../../BOI/global.js'
 
 
 export default function TabTwoScreen() {
@@ -20,7 +20,7 @@ export default function TabTwoScreen() {
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
-  const otpApiUrl = 'http://192.168.0.101:8080/otp/routers/default/index/graphql';
+  const otpApiUrl = 'https://8976-2a02-a310-823d-9980-4c71-9824-7fdc-69bb.ngrok-free.app/otp/routers/default/index/graphql';
   const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
   const [routeTime, setRouteTime] = useState(0);
   
@@ -192,7 +192,7 @@ export default function TabTwoScreen() {
       }`
       };
       
-      const response = await axios.post(otpApiUrl, requestBody, {
+      const response = await axios.post((global as any).otpApiUrl, requestBody, {
         headers: {
           'Content-Type': 'application/json',
         },

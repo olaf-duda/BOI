@@ -1,6 +1,7 @@
 import { useState, useEffect, View } from "react";
 import axios from 'axios';
 import { FlatList } from "react-native-gesture-handler";
+import '../BOI/global.js'
 //import RNFS from 'react-native-fs';
 
 //const filePath = '../API_data/archiwum.lst'; // Adjust the path accordingly
@@ -8,7 +9,7 @@ import { FlatList } from "react-native-gesture-handler";
 
 // We for now read from a local file instead of API
  //const apiKey = 'xEsFhYZR5jpO1Ug1';
- const apiUrl = `https://5a06-85-115-214-47.ngrok-free.app`;
+ const apiUrl = `https://5c77-79-191-133-36.ngrok-free.app`;
 
 const useBikeStationList =  () => {
     const [bikeStations, setBikeStations] = useState([]);
@@ -33,7 +34,7 @@ const useBikeStationList =  () => {
             //         'Api-Key': apiKey,
             //     },
             // });
-            const response = await axios.get(apiUrl);
+            const response = await axios.get(global.ngrokUrl);
             setBikeStations(response.data[0].cities[0].places);
             console.log("number of bikes", bikeStations.length)
             setIsLoading(false);
