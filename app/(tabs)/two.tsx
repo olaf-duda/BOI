@@ -4,7 +4,11 @@ import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
+
 import {decode} from '../../algorithms/polyline.js'
+import {createRequest} from '../../algorithms/createRequest.js'
+import {CheapRoute} from '../../algorithms/cheapRoute.js'
+
 import * as Location from 'expo-location';
 import  KDTree  from '../../algorithms/kdtree.js';
 import Station from '../../interfaces/Stations.js'
@@ -109,9 +113,9 @@ export default function TabTwoScreen() {
         const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
         const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
-        otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red");
-        otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue")
-        otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red");
+        otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
+        otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue", kdTree)
+        otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
 
         addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
         addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
@@ -126,81 +130,20 @@ export default function TabTwoScreen() {
   }
 
   const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: {lat: number, lon: number}, 
-    destinationCoordinates:  {lat: number, lon: number}, color: string) => {
-    const now = new Date();
-      const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')}`;
+    destinationCoordinates:  {lat: number, lon: number}, color: string, kdTree: KDTree) => {
 
-      let triangle = "";
-      if (bicycleRouteType == "TRIANGLE") {
-        triangle = `triangle : {
-          safetyFactor: 0.33, 
-          slopeFactor: 0.33, 
-          timeFactor: 0.34}`;
-      }
-      const requestBody = {
-        query: `{
-        plan(
-            optimize: ${bicycleRouteType}
-            ${triangle}
-            from: { lat: ${startingCoordinates.lat}, lon: ${startingCoordinates.lon} }
-            to: { lat: ${destinationCoordinates.lat}, lon: ${destinationCoordinates.lon} }
-            date: "${currentDate}",
-            time: "${currentTime}",
-            transportModes: [
-                {
-                    mode: ${travelType}
-                },
-            ]) {
-              itineraries {
-                  startTime
-                  endTime
-                  legs {
-                      mode
-                      startTime
-                      endTime
-                      from {
-                          name
-                          lat
-                          lon
-                          departureTime
-                          arrivalTime
-                      }
-                      to {
-                          name
-                          lat
-                          lon
-                          departureTime
-                          arrivalTime
-                      }
-                      route {
-                          gtfsId
-                          longName
-                          shortName
-                      }
-                      legGeometry {
-                          points
-                      }
-                  }
-              }
-          }
-      }`
-      };
-      
-      const response = await axios.post((global as any).otpApiUrl, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const legs = response.data.data.plan.itineraries[0].legs;
-      let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
-      setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
+    const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
+    
+    const response = await axios.post((global as any).otpApiUrl, requestBody, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const legs = response.data.data.plan.itineraries[0].legs;
+    let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
+    setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
+    if(durationInMinutes <=17 || travelType == "WALK"){      
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -210,6 +153,20 @@ export default function TabTwoScreen() {
           drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
       });
+    }
+    else{
+      let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+
+      legs.forEach((leg: { legGeometry: any; }) => {
+        const legGeometry = leg.legGeometry;
+        const points = decode(legGeometry.points);
+        for (let i = 0; i < 2 - 1; i++) {
+          const [lat1, lon1] = points[i];
+          const [lat2, lon2] = points[i + 1];
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
+        }
+      });
+    }
   }
 
   const clearMap = () => {
