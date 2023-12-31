@@ -157,15 +157,7 @@ export default function TabTwoScreen() {
     else{
       let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
 
-      legs.forEach((leg: { legGeometry: any; }) => {
-        const legGeometry = leg.legGeometry;
-        const points = decode(legGeometry.points);
-        for (let i = 0; i < 2 - 1; i++) {
-          const [lat1, lon1] = points[i];
-          const [lat2, lon2] = points[i + 1];
-          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
-        }
-      });
+      //To define, drawing the points on the map
     }
   }
 
