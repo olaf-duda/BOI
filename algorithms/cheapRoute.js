@@ -101,7 +101,7 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
     }
 
     console.log('found point is: ' + [found_point[1], found_point[0]]);
-    const numOfStations = 3;
+    const numOfStations = 6;
     const nearestStops = kdTree.findNearestNeighbors([found_point[1], found_point[0]], numOfStations);
     const mapRef = useRef<WebView | null>(null);
     if (mapRef.current) {
@@ -134,8 +134,9 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
+    if(noOfSubstations<10)
+        findStations(previous_stop, final_stop, kdTree, routeType, noOfSubstations+1);
+    console.log("didnt find station");
     
-    console.log("nie znalazlo zadnej traski")
-    // TO IMPLEMENT
     return [nearestStops[i], encodedRouteToNearestStop];
 }
