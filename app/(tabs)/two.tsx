@@ -1,16 +1,16 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, PermissionsAndroid } from 'react-native';
+import { View, TouchableOpacity, Switch, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, PermissionsAndroid } from 'react-native';
 import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
-import {decode} from '../../algorithms/polyline.js'
-import {createRequest} from '../../algorithms/createRequest.js'
-import {CheapRoute} from '../../algorithms/cheapRoute.js'
+import { decode } from '../../algorithms/polyline.js'
+import { createRequest } from '../../algorithms/createRequest.js'
+import { CheapRoute } from '../../algorithms/cheapRoute.js'
 
 import * as Location from 'expo-location';
-import  KDTree  from '../../algorithms/kdtree.js';
+import KDTree from '../../algorithms/kdtree.js';
 import Station from '../../interfaces/Stations.js'
 import useBikeStationList from '../../hook/bikeData.js';
 
@@ -18,6 +18,8 @@ import '../../BOI/global.js'
 
 
 export default function TabTwoScreen() {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
   const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
@@ -25,9 +27,9 @@ export default function TabTwoScreen() {
   const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
   const otpApiUrl = 'https://8976-2a02-a310-823d-9980-4c71-9824-7fdc-69bb.ngrok-free.app/otp/routers/default/index/graphql';
-  const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
+  const { bikeStations, isLoading, error, fetchData } = useBikeStationList();
   const [routeTime, setRouteTime] = useState(0);
-  
+
   const handleBalancedRoute = () => {
     findRoute("TRIANGLE");
     setSelectedRoute("TRIANGLE");
@@ -129,11 +131,11 @@ export default function TabTwoScreen() {
     }
   }
 
-  const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: {lat: number, lon: number}, 
-    destinationCoordinates:  {lat: number, lon: number}, color: string, kdTree: KDTree) => {
+  const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: { lat: number, lon: number },
+    destinationCoordinates: { lat: number, lon: number }, color: string, kdTree: KDTree) => {
 
     const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
-    
+
     const response = await axios.post((global as any).otpApiUrl, requestBody, {
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +145,7 @@ export default function TabTwoScreen() {
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
-    if(durationInMinutes <=17 || travelType == "WALK"){      
+    if (durationInMinutes <= 17 || travelType == "WALK") {
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -154,7 +156,7 @@ export default function TabTwoScreen() {
         }
       });
     }
-    else{
+    else {
       let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
 
       //To define, drawing the points on the map
@@ -192,8 +194,8 @@ export default function TabTwoScreen() {
 
   const addNewMarker = (lat: number, lon: number, isStarting: boolean) => {
     if (mapRef.current) {
-      let script ='';
-      if(isStarting == true) {
+      let script = '';
+      if (isStarting == true) {
         script = `
         if (typeof map !== 'undefined') {
           map.setView([${lat}, ${lon}], 13);
@@ -224,16 +226,16 @@ export default function TabTwoScreen() {
             style={styles.addressInput}
             onChangeText={setStartingAddress}
             value={startingAddress}
-            placeholder="Enter starting address"
+            placeholder="Enter starting address..."
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleSetStartingLocation}>
             <Text style={styles.buttonText}>
-              <MaterialIcons name="home" size={24} color="white" /> 
+              <MaterialIcons name="home" size={24} color="#36aa12" />
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={handleStartingAddressSubmit}>
-            <Text> 
-              <MaterialIcons name="search" size={24} color="white" /> 
+            <Text>
+              <MaterialIcons name="search" size={24} color="#36aa12" />
             </Text>
           </TouchableOpacity>
         </View>
@@ -243,45 +245,61 @@ export default function TabTwoScreen() {
             style={styles.addressInput}
             onChangeText={setDestinationAddress}
             value={destinationAddress}
-            placeholder="Enter destination address"
+            placeholder="Enter destination address..."
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleDestinationAddressSubmit}>
             <Text> { }
-              <MaterialIcons name="search" size={24} color="white" /> { }
+              <MaterialIcons name="search" size={24} color="#36aa12" /> { }
             </Text>
           </TouchableOpacity>
         </View>
         <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} />
+        <View style={{ height: 7 }}></View>
         <View style={styles.durationContainer}>
           {selectedRoute && (
             <Text style={styles.durationText}>Route time: {routeTime} minutes</Text>
           )}
-        </View> 
-        <View style={styles.buttonArea}>
-          <TouchableOpacity
-            style={[styles.button, selectedRoute === 'TRIANGLE' && styles.selectedButton]} 
-            onPress={handleBalancedRoute}
-          >
-            <Text style={styles.buttonText}>Balanced route</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, selectedRoute === 'QUICK' && styles.selectedButton]}
-            onPress={handleFastRoute}
-          >
-            <Text style={styles.buttonText}>Fast route</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, selectedRoute === 'SAFE' && styles.selectedButton]} 
-            onPress={handleSafeRoute}
-          >
-            <Text style={styles.buttonText}>Safe route</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, selectedRoute === 'FLAT' && styles.selectedButton]} 
-            onPress={handleFlatRoute}
-          >
-            <Text style={styles.buttonText}>Flat route</Text>
-          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 0.5, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
+          <View style={{ height: 7 }}></View>
+          <Text style={styles.label}>Free route mode:</Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#77ee44" }}
+            thumbColor={isEnabled ? "#339933" : "#f4f3f4"}
+            ios_backgroundColor="#3e3e3e"
+            onValueChange={toggleSwitch}
+            value={isEnabled}
+          />
+          <Text style={styles.label}>Choose a route type:</Text>
+          <View style={styles.buttonArea}>
+            <TouchableOpacity
+              style={[styles.button, selectedRoute === 'TRIANGLE' && styles.selectedButton]}
+              onPress={handleBalancedRoute}
+            >
+              <Text style={[styles.buttonText, selectedRoute === 'TRIANGLE' && styles.selectedText]}>Balanced route</Text>
+            </TouchableOpacity>
+            <View style={{ width: 6 }} />
+            <TouchableOpacity
+              style={[styles.button, selectedRoute === 'QUICK' && styles.selectedButton]}
+              onPress={handleFastRoute}
+            >
+              <Text style={[styles.buttonText, selectedRoute === 'QUICK' && styles.selectedText]}>Fastest route</Text>
+            </TouchableOpacity>
+            <View style={{ width: 6 }} />
+            <TouchableOpacity
+              style={[styles.button, selectedRoute === 'SAFE' && styles.selectedButton]}
+              onPress={handleSafeRoute}
+            >
+              <Text style={[styles.buttonText, selectedRoute === 'SAFE' && styles.selectedText]}>Safest route</Text>
+            </TouchableOpacity>
+            <View style={{ width: 6 }} />
+            <TouchableOpacity
+              style={[styles.button, selectedRoute === 'FLAT' && styles.selectedButton]}
+              onPress={handleFlatRoute}
+            >
+              <Text style={[styles.buttonText, selectedRoute === 'FLAT' && styles.selectedText]}>Flattest route</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </>
@@ -293,39 +311,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 5,
+    backgroundColor: 'black',
+    borderColor: '#77ee44',
+    borderRadius: 20,
+    borderWidth: 1
+  },
+  selectedText: {
+    color: 'black'
+  },
+  label: {
+    marginRight: 10, // Space between the label and the switch
+    fontSize: 16, // Adjust the font size as needed
+    color: 'white'
   },
   durationText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'black',
+    color: 'white',
   },
   container: {
     flex: 1,
-    backgroundColor: 'grey',
+    backgroundColor: 'black',
   },
   webview: {
     flex: 1,
   },
+  switchContainer: {
+    // Adjust this style as needed
+    marginBottom: 20, // Spacing between the switch and the buttons
+    alignItems: 'center', // Center the switch horizontally
+  },
   buttonArea: {
-    flex: 0.2,
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    paddingHorizontal: 5,
   },
   button: {
     width: 85,
     padding: 10,
     borderRadius: 10,
-    backgroundColor: 'black',
+    backgroundColor: '#333333',
     alignItems: 'center',
   },
   selectedButton: {
-    backgroundColor: 'blue', // Change the color for the selected route
+    backgroundColor: '#77ee44', // Change the color for the selected route
   },
   buttonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
+    textAlign: 'center'
   },
   addressInputContainer: {
     flexDirection: 'row',
@@ -334,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 1)',
     borderWidth: 1,
     borderColor: 'black',
-    borderRadius: 5,
+    borderRadius: 15,
     margin: 10,
   },
   addressInput: {
@@ -345,7 +382,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 40,
     height: 40,
-    backgroundColor: 'blue',
+    backgroundColor: 'white',
     borderRadius: 20, // To make it circular
     justifyContent: 'center',
     alignItems: 'center',
