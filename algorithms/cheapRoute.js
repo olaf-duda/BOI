@@ -7,13 +7,16 @@ import axios from 'axios';
 
 import { decode } from './polyline.js'
 import '../BOI/global.js'
-import {createRequest} from './createRequest.js'
+import {createRequest, createRequestFromExactVal} from './createRequest.js'
 
 import * as Location from 'expo-location';
 import  KDTree  from './kdtree.js';
 
 function distance(pointA, pointB) {
-    return Math.sqrt((pointA[0] - pointB[0]) * 2 + (pointA[1] - pointB[1]) * 2); // Euclidean distance for 2D points
+    return new Promise(resolve => {
+        const dist = Math.sqrt((pointA[0] - pointB[0]) ** 2 + (pointA[1] - pointB[1]) ** 2);
+        resolve(dist);
+    });
 }
 
 export async function CheapRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
@@ -27,10 +30,11 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
     while(currentNeededTime > 17){
         
         console.log(result_points[i]);
-        const new_subroute = findStations(result_points[i], destinationCoordinates, kdTree, routeType, noOfSubstations);
+        const new_subroute = await findStations(result_points[i], destinationCoordinates, kdTree, routeType, noOfSubstations);
 
         i++;
         result_points.push(new_subroute[0]);
+        console.log(new_subroute[0] + ' ' + new_subroute[1]);
         full_route.push(decode(new_subroute[1]));
 
         const requestBody = createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE")
@@ -43,6 +47,7 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
 
         currentNeededTime = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
         if (currentNeededTime <= 17){
+            console.log('dupa4')
             full_route.push(decode(response.data.data.plan.itineraries[0].legs[0].legGeometry.points));
         }
     }
@@ -67,15 +72,19 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
 
     var totalDistance = 0;
     for (let i = 0; i < points.length - 1; i++) {
-        totalDistance += distance(points[i], points[i + 1]);
+        totalDistance += await distance(points[i], points[i + 1]);
     }
+
+    console.log("total distance is: " + totalDistance);
 
     var currentDistance = 0;
     var fractionedDistance = (1 / (noOfSubstations + 1)) * totalDistance;
     var found_point;
+
     for (let i = 0; i < points.length - 1; i++) {
-        currentDistance += distance(points[i], points[i + 1]);
-        if (currentDistance = fractionedDistance) {
+        currentDistance += await distance(points[i], points[i + 1]);
+        
+        if (currentDistance == fractionedDistance) {
             // we found the exact point i
             found_point = points[i + 1];
             break;
@@ -83,7 +92,7 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
         else if (currentDistance > fractionedDistance) {
             // we skipped the point which we're looking for
             const overflow = currentDistance - fractionedDistance;
-            const delta = distance(points[i], points[i + 1]);
+            const delta = await distance(points[i], points[i + 1]);
             const sideFraction = (delta - overflow) / delta;
             var dx = points[i + 1][0] - points[i][0];
             var dy = points[i + 1][1] - points[i][1];
@@ -94,29 +103,35 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
         }
     }
 
+    console.log('found point is: ' + found_point);
     const numOfStations = 3;
-    const nearestStop = kdTree.findNearestNeighbors(found_point, numOfStations);
+    const nearestStops = kdTree.findNearestNeighbors(found_point, numOfStations);
+    
 
+    console.log(nearestStops[0].lat + ', ' + nearestStops[0].lon + ' początek loopa');
     for(var i = 0; i<numOfStations; i++){
         console.log('dupa' + i);
-        const requestBody2 = createRequest(routeType, previous_stop, nearestStop, "BICYCLE")
 
-        const response2 = await axios.post(global.otpApiUrl, requestBody2, {
+
+        const response2 = await axios.post(global.otpApiUrl, createRequestFromExactVal(routeType, previous_stop.lat, previous_stop.lon, nearestStops[i].lat, nearestStops[i].lon, "BICYCLE"), {
         headers: {
             'Content-Type': 'application/json',
         },
         });
 
-        let durationInMinutes = (response2.data.data.plan.itineraries[0].endTime - response2.data.data.plan.itineraries[0].startTime) / (1000 * 60)
+        console.log('Is:' + response2);
+
+        let durationInMinutes = (response2.data.data.plan.itineraries[0].endTime - response2.data.data.plan.itineraries[0].startTime) / (1000 * 60);
 
         if (durationInMinutes <= 17){
             const encodedRouteToNearestStop = response2.data.data.plan.itineraries[0].legs[0].legGeometry.points;
 
-            return [nearestStop[i], encodedRouteToNearestStop];
+            console.log('returning: ' + nearestStops[i] + ' ' + encodedRouteToNearestStop);
+            return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
     
 
     // TO IMPLEMENT
-    return [nearestStop[i], encodedRouteToNearestStop];
+    return [nearestStops[i], encodedRouteToNearestStop];
 }
