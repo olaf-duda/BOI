@@ -144,8 +144,7 @@ export default function TabTwoScreen() {
     const legs = response.data.data.plan.itineraries[0].legs;
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
-
-    if (durationInMinutes <= 17 || travelType == "WALK") {
+    if(durationInMinutes <=17 || travelType == "WALK"){
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -158,8 +157,16 @@ export default function TabTwoScreen() {
     }
     else {
       let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
-
-      //To define, drawing the points on the map
+      drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
+      for(let j = 0; j<points.length; j++) { 
+        for (let i = 0; i < points[j].length-1; i++) {
+          const [lat1, lon1] = points[j][i];
+          const [lat2, lon2] = points[j][i + 1];
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
+        }
+        if(j !== points.length-1)
+          addNewMarker(points[j][points[j].length-1][1], points[j][points[j].length-1][0], false)
+      }   
     }
   }
 
@@ -305,6 +312,7 @@ export default function TabTwoScreen() {
     </>
   );
 };
+
 
 const styles = StyleSheet.create({
   durationContainer: {
