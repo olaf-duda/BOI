@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -7,6 +7,7 @@ import html_script from '../html_script.js';
 import useBikeStationList from '../../hook/bikeData.js';
 
 import Station from '../../interfaces/Stations.js'
+import  KDTree  from '../../algorithms/kdtree.js';
 
 export default function TabThreeScreen() {
   const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
@@ -15,6 +16,45 @@ export default function TabThreeScreen() {
 
   const handleStationAddress = useCallback( () => {
     console.log("starting the loop")
+    if (bikeStations && bikeStations.length > 0) {
+      // Preprocess stations to extract only coordinates
+      const stationCoordinates = bikeStations.map((station: Station) => [
+        station.geoCoords.lat,
+        station.geoCoords.lng,
+      ]);
+      // Create KD-tree with station coordinates
+      const kdTree = new KDTree(stationCoordinates);
+      // Find nearest neighbors for a specific query point
+      const queryPoint = [52.2345, 21.0123]; // Replace this with your query point
+      const nearest = kdTree.findNearestNeighbors(queryPoint, 5);
+      
+      console.log(nearest);
+      if (mapRef.current) {
+        const script = `
+            if (typeof map !== 'undefined') {
+              L.circle([${queryPoint[0]}, ${queryPoint[1]}],{
+                color: 'red'}).addTo(map)
+              .bindPopup('start').openPopup();
+              L.circle([${nearest[0].lat}, ${nearest[0].lon}]).addTo(map)
+              .bindPopup('neighbour').openPopup();
+              L.circle([${nearest[1].lat}, ${nearest[1].lon}]).addTo(map)
+              .bindPopup('neighbour').openPopup();
+              L.circle([${nearest[2].lat}, ${nearest[2].lon}]).addTo(map)
+              .bindPopup('neighbour').openPopup();
+              L.circle([${nearest[3].lat}, ${nearest[3].lon}]).addTo(map)
+              .bindPopup('neighbour').openPopup();
+              L.circle([${nearest[4].lat}, ${nearest[4].lon}]).addTo(map)
+              .bindPopup('neighbour').openPopup();
+            }
+        `;
+        //console.log("Station at:" + lat + " " + lng + "\n");
+        mapRef.current.injectJavaScript(script);
+      }
+    }
+   addAllStationMarkers();
+  }, [bikeStations]);
+
+  const addAllStationMarkers = () => {
     try {
       bikeStations.forEach((station : Station) => {
         addStationMarker((station.geoCoords.lat), (station.geoCoords.lng), station.name,station.bikes.length); // Update map with new coordinates
@@ -22,8 +62,7 @@ export default function TabThreeScreen() {
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
-  }, [bikeStations]);
-
+  };
 
   const addStationMarker = (lat: number, lng: number, name: string,  bikes: number) => {
       if (mapRef.current) {
@@ -32,7 +71,7 @@ export default function TabThreeScreen() {
             L.marker([${lat}, ${lng}]).addTo(map).bindPopup('<b>${name}</b><br />Available bikes: ${bikes}');
             }
         `;
-        console.log("Station at:" + lat + " " + lng + "\n");
+        //console.log("Station at:" + lat + " " + lng + "\n");
         mapRef.current.injectJavaScript(script);
       }
   };

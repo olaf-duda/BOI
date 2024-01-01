@@ -4,8 +4,17 @@ import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
-import decode from '../../algorithms/polyline.js'
+
+import {decode} from '../../algorithms/polyline.js'
+import {createRequest} from '../../algorithms/createRequest.js'
+import {CheapRoute} from '../../algorithms/cheapRoute.js'
+
 import * as Location from 'expo-location';
+import  KDTree  from '../../algorithms/kdtree.js';
+import Station from '../../interfaces/Stations.js'
+import useBikeStationList from '../../hook/bikeData.js';
+
+import '../../BOI/global.js'
 
 
 export default function TabTwoScreen() {
@@ -13,9 +22,11 @@ export default function TabTwoScreen() {
   const [destinationAddress, setDestinationAddress] = useState('');
   const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
-  const [routeTime, setRouteTime] = useState(10);
   const [selectedRoute, setSelectedRoute] = useState('');
   const mapRef = useRef<WebView | null>(null);
+  const otpApiUrl = 'https://8976-2a02-a310-823d-9980-4c71-9824-7fdc-69bb.ngrok-free.app/otp/routers/default/index/graphql';
+  const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
+  const [routeTime, setRouteTime] = useState(0);
   
   const handleBalancedRoute = () => {
     findRoute("TRIANGLE");
@@ -88,108 +99,72 @@ export default function TabTwoScreen() {
     }
   };
 
-  const findRoute = async (routeType: string) => {
+  const findRoute = async (bicycleRouteType: string) => {
     try {
       clearMap();
+      setRouteTime(0);
 
-      const apiUrl = 'http://192.168.230.83:8080/otp/routers/default/index/graphql';
+      if (bikeStations && bikeStations.length > 0) {
+        const stationCoordinates = bikeStations.map((station: Station) => [
+          station.geoCoords.lat,
+          station.geoCoords.lng,
+        ]);
+        const kdTree = new KDTree(stationCoordinates);
+        const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
+        const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
-      // Use the current date and time in the GraphQL query
-      const now = new Date();
-      const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')}`;
+        otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
+        otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue", kdTree)
+        otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
 
-      let triangle = "";
-      if (routeType == "TRIANGLE") {
-        triangle = `triangle : {
-          safetyFactor: 0.33, 
-          slopeFactor: 0.33, 
-          timeFactor: 0.34}`;
+        addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
+        addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
+        addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, false);
+        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
       }
-      const requestBody = {
-        query: `{
-        plan(
-            optimize: ${routeType}
-            ${triangle}
-            from: { lat: ${startingCoordinates.lat}, lon: ${startingCoordinates.lon} }
-            to: { lat: ${destinationCoordinates.lat}, lon: ${destinationCoordinates.lon} }
-            date: "${currentDate}",
-            time: "${currentTime}",
-            transportModes: [
-                {
-                    mode: BICYCLE
-                },
-            ]) {
-              itineraries {
-                  startTime
-                  endTime
-                  legs {
-                      mode
-                      startTime
-                      endTime
-                      from {
-                          name
-                          lat
-                          lon
-                          departureTime
-                          arrivalTime
-                      }
-                      to {
-                          name
-                          lat
-                          lon
-                          departureTime
-                          arrivalTime
-                      }
-                      route {
-                          gtfsId
-                          longName
-                          shortName
-                      }
-                      legGeometry {
-                          points
-                      }
-                  }
-              }
-          }
-      }`
-      };
+      return 1;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return null;
+    }
+  }
 
-      const response = await axios.post(apiUrl, requestBody, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: {lat: number, lon: number}, 
+    destinationCoordinates:  {lat: number, lon: number}, color: string, kdTree: KDTree) => {
 
-      const legs = response.data.data.plan.itineraries[0].legs;
-
-      let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
-      setRouteTime(Math.round(durationInMinutes));
-      //console.log("Duration:", durationInMinutes, routeTime);
-
+    const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
+    
+    const response = await axios.post((global as any).otpApiUrl, requestBody, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const legs = response.data.data.plan.itineraries[0].legs;
+    let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
+    setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
+    if(durationInMinutes <=17 || travelType == "WALK"){      
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
         for (let i = 0; i < points.length - 1; i++) {
-
           const [lat1, lon1] = points[i];
           const [lat2, lon2] = points[i + 1];
-          drawLineBetweenPoints(lon1, lat1, lon2, lat2);
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
       });
-      addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
-      addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
-
-
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      return null;
+    }
+    else{
+      let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
+      for(let j = 0; j<points.length; j++) { 
+        for (let i = 0; i < points[j].length-1; i++) {
+          const [lat1, lon1] = points[j][i];
+          const [lat2, lon2] = points[j][i + 1];
+          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
+        }
+        if(j !== points.length-1)
+          addNewMarker(points[j][points[j].length-1][1], points[j][points[j].length-1][0], false)
+      }   
     }
   }
 
@@ -209,12 +184,12 @@ export default function TabTwoScreen() {
     }
   }
 
-  const drawLineBetweenPoints = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const drawLineBetweenPoints = (lat1: number, lon1: number, lat2: number, lon2: number, color: string) => {
     if (mapRef.current) {
       const script = `
         if (typeof map !== 'undefined') {
           const polyline = L.polyline([[${lat1}, ${lon1}],[${lat2}, ${lon2}]], {
-            color: 'blue'
+            color: '${color}',
           }).addTo(map);
         }
       `;
@@ -246,8 +221,6 @@ export default function TabTwoScreen() {
       mapRef.current.injectJavaScript(script);
     }
   };
-
-
 
   return (
     <>
@@ -321,6 +294,7 @@ export default function TabTwoScreen() {
     </>
   );
 };
+
 
 const styles = StyleSheet.create({
   durationContainer: {
