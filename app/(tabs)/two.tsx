@@ -18,7 +18,7 @@ import '../../BOI/global.js'
 
 
 export default function TabTwoScreen() {
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isFreeRouteEnabled, setIsEnabled] = useState(false);
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
@@ -29,6 +29,10 @@ export default function TabTwoScreen() {
   const otpApiUrl = 'https://8976-2a02-a310-823d-9980-4c71-9824-7fdc-69bb.ngrok-free.app/otp/routers/default/index/graphql';
   const { bikeStations, isLoading, error, fetchData } = useBikeStationList();
   const [routeTime, setRouteTime] = useState(0);
+  const [walk1Time, setWalk1Time] = useState(0);
+  const [bikeTime, setBikeTime] = useState(0);
+  const [walk2Time, setWalk2Time] = useState(0);
+  let isDestinationWalk = false;
 
   const handleBalancedRoute = () => {
     findRoute("TRIANGLE");
@@ -105,6 +109,10 @@ export default function TabTwoScreen() {
     try {
       clearMap();
       setRouteTime(0);
+      setWalk1Time(0);
+      setBikeTime(0);
+      setWalk2Time(0);
+      isDestinationWalk = false;
 
       if (bikeStations && bikeStations.length > 0) {
         const stationCoordinates = bikeStations.map((station: Station) => [
@@ -144,7 +152,19 @@ export default function TabTwoScreen() {
     const legs = response.data.data.plan.itineraries[0].legs;
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
-    if(durationInMinutes <=17 || travelType == "WALK"){
+
+    if(travelType=="BICYCLE")
+      setBikeTime(Math.round(durationInMinutes))
+    else if(isDestinationWalk) {
+      setWalk2Time(Math.round(durationInMinutes))
+      isDestinationWalk = !isDestinationWalk;
+    }
+    else {
+      setWalk1Time(Math.round(durationInMinutes))
+      isDestinationWalk = !isDestinationWalk;
+    }
+
+    if(durationInMinutes <=17 || travelType == "WALK" || !isFreeRouteEnabled ){
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -155,7 +175,7 @@ export default function TabTwoScreen() {
         }
       });
     }
-    else {
+    else if (isFreeRouteEnabled){
       let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
       drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
       for(let j = 0; j<points.length; j++) { 
@@ -167,6 +187,9 @@ export default function TabTwoScreen() {
         if(j !== points.length-1)
           addNewMarker(points[j][points[j].length-1][1], points[j][points[j].length-1][0], false)
       }   
+    }
+    else {
+
     }
   }
 
@@ -237,7 +260,7 @@ export default function TabTwoScreen() {
           />
           <TouchableOpacity style={styles.iconButton} onPress={handleSetStartingLocation}>
             <Text style={styles.buttonText}>
-              <MaterialIcons name="home" size={24} color="#36aa12" />
+              <MaterialIcons name="pin-drop" size={24} color="#36aa12" />
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={handleStartingAddressSubmit}>
@@ -264,7 +287,25 @@ export default function TabTwoScreen() {
         <View style={{ height: 7 }}></View>
         <View style={styles.durationContainer}>
           {selectedRoute && (
-            <Text style={styles.durationText}>Route time: {routeTime} minutes</Text>
+            <Text style={styles.durationText}>
+              <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
+              {walk1Time} min
+              {'  '} 
+
+              <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
+              {'  '} 
+
+              <MaterialIcons name="directions-bike" size={24} color="#36aa12" />
+              {' '} 
+              {bikeTime} min
+              {'  '} 
+
+              <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
+              <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
+
+              {walk2Time} min
+
+              </Text>
           )}
         </View>
         <View style={{ flex: 0.5, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
@@ -272,10 +313,10 @@ export default function TabTwoScreen() {
           <Text style={styles.label}>Free route mode:</Text>
           <Switch
             trackColor={{ false: "#767577", true: "#77ee44" }}
-            thumbColor={isEnabled ? "#339933" : "#f4f3f4"}
+            thumbColor={isFreeRouteEnabled ? "#339933" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
             onValueChange={toggleSwitch}
-            value={isEnabled}
+            value={isFreeRouteEnabled}
           />
           <Text style={styles.label}>Choose a route type:</Text>
           <View style={styles.buttonArea}>
