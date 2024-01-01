@@ -61,7 +61,7 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
 
     //New otp route from previous_stop to final_stop
 
-    const response = await axios.post(global.otpApiUrl, createRequestFromExactVal(routeType, previous_stop.lat, previous_stop.lon, final_stop.lat, final_stop.lon, "BICYCLE"), {
+    const response = await axios.post(global.otpApiUrl, createRequest(routeType, previous_stop, final_stop, "BICYCLE"), {
     headers: {
         'Content-Type': 'application/json',
     },
@@ -114,7 +114,7 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
       }
 
     for(var i = 0; i<numOfStations; i++){
-        const response2 = await axios.post(global.otpApiUrl, createRequestFromExactVal(routeType, previous_stop.lat, previous_stop.lon, nearestStops[i].lat, nearestStops[i].lon, "BICYCLE"), {
+        const response2 = await axios.post(global.otpApiUrl, createRequest(routeType, previous_stop, nearestStops[i], "BICYCLE"), {
         headers: {
             'Content-Type': 'application/json',
         },
