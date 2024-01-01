@@ -67,6 +67,7 @@ export function createRequest (bicycleRouteType, startingCoordinates, destinatio
 }
 
 export function createRequestFromExactVal (bicycleRouteType, startingCoordinatesLat, startingCoordinatesLon, destinationCoordinatesLat, destinationCoordinatesLon, travelType){
+    console.log(startingCoordinatesLat, startingCoordinatesLon, destinationCoordinatesLat, destinationCoordinatesLon)
     const now = new Date();
     const currentDate = `${now.getFullYear()}-${(now.getMonth() + 1)
       .toString()
@@ -131,6 +132,7 @@ export function createRequestFromExactVal (bicycleRouteType, startingCoordinates
         }
     }`
     };
-    console.log(requestBody);
+    //console.log("siema", requestBody)
+
     return requestBody;
 }

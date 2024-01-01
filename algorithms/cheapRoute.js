@@ -29,16 +29,16 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
 
     while(currentNeededTime > 17){
         
-        console.log(result_points[i]);
+        //console.log(result_points[i]);
         const new_subroute = await findStations(result_points[i], destinationCoordinates, kdTree, routeType, noOfSubstations);
 
         i++;
         result_points.push(new_subroute[0]);
-        console.log(new_subroute[0] + ' ' + new_subroute[1]);
+        //console.log(new_subroute[0] + ' ' + new_subroute[1]);
         full_route.push(decode(new_subroute[1]));
 
         const requestBody = createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE")
-
+        //console.log("zwykly request", createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE"))
         const response = await axios.post(global.otpApiUrl, requestBody, {
         headers: {
             'Content-Type': 'application/json',
@@ -47,14 +47,13 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
 
         currentNeededTime = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
         if (currentNeededTime <= 17){
-            console.log('dupa4')
+            console.log("czas traski" + currentNeededTime)
             full_route.push(decode(response.data.data.plan.itineraries[0].legs[0].legGeometry.points));
         }
     }
 
     console.log("Found the route:");
-    console.log(full_route);
-
+    console.log(full_route.length, "full rut")
     return full_route;
 }
 
@@ -62,20 +61,18 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
 
     //New otp route from previous_stop to final_stop
 
-    const response = await axios.post(global.otpApiUrl, createRequest(routeType, previous_stop, final_stop, "BICYCLE"), {
+    const response = await axios.post(global.otpApiUrl, createRequestFromExactVal(routeType, previous_stop.lat, previous_stop.lon, final_stop.lat, final_stop.lon, "BICYCLE"), {
     headers: {
         'Content-Type': 'application/json',
     },
     });
-
+    //console.log("rispons", response.data.data)
     const points = decode(response.data.data.plan.itineraries[0].legs[0].legGeometry.points);
 
     var totalDistance = 0;
     for (let i = 0; i < points.length - 1; i++) {
         totalDistance += await distance(points[i], points[i + 1]);
     }
-
-    console.log("total distance is: " + totalDistance);
 
     var currentDistance = 0;
     var fractionedDistance = (1 / (noOfSubstations + 1)) * totalDistance;
@@ -103,35 +100,42 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
         }
     }
 
-    console.log('found point is: ' + found_point);
+    console.log('found point is: ' + [found_point[1], found_point[0]]);
     const numOfStations = 3;
-    const nearestStops = kdTree.findNearestNeighbors(found_point, numOfStations);
-    
+    const nearestStops = kdTree.findNearestNeighbors([found_point[1], found_point[0]], numOfStations);
+    const mapRef = useRef<WebView | null>(null);
+    if (mapRef.current) {
+        const script = `
+            if (typeof map !== 'undefined') {
+            L.marker([${found_point.lat}, ${found_point.lon}]).addTo(map);
+            }
+        `;
+        mapRef.current.injectJavaScript(script);
+      }
 
-    console.log(nearestStops[0].lat + ', ' + nearestStops[0].lon + ' początek loopa');
     for(var i = 0; i<numOfStations; i++){
-        console.log('dupa' + i);
-
-
         const response2 = await axios.post(global.otpApiUrl, createRequestFromExactVal(routeType, previous_stop.lat, previous_stop.lon, nearestStops[i].lat, nearestStops[i].lon, "BICYCLE"), {
         headers: {
             'Content-Type': 'application/json',
         },
         });
 
-        console.log('Is:' + response2);
+        const responseDataJson = JSON.stringify(response2.data.data);
 
-        let durationInMinutes = (response2.data.data.plan.itineraries[0].endTime - response2.data.data.plan.itineraries[0].startTime) / (1000 * 60);
-
+        // Parse JSON string to JavaScript object
+        const responseDataObject = JSON.parse(responseDataJson);
+        // Now you can access properties like plan.itineraries[0]
+        let durationInMinutes = (responseDataObject.plan.itineraries[0].endTime - responseDataObject.plan.itineraries[0].startTime) / (1000 * 60);
         if (durationInMinutes <= 17){
-            const encodedRouteToNearestStop = response2.data.data.plan.itineraries[0].legs[0].legGeometry.points;
+            const encodedRouteToNearestStop = responseDataObject.plan.itineraries[0].legs[0].legGeometry.points;
 
-            console.log('returning: ' + nearestStops[i] + ' ' + encodedRouteToNearestStop);
+            //console.log("czas traski " + durationInMinutes);
+            //console.log("ktory sasiad " + i)
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
     
-
+    console.log("nie znalazlo zadnej traski")
     // TO IMPLEMENT
     return [nearestStops[i], encodedRouteToNearestStop];
 }
