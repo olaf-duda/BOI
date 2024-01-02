@@ -1,7 +1,7 @@
 import { useState, useEffect, View } from "react";
 import axios from 'axios';
 import { FlatList } from "react-native-gesture-handler";
-import '../BOI/global.js'
+import '../global.js'
 //import RNFS from 'react-native-fs';
 
 //const filePath = '../API_data/archiwum.lst'; // Adjust the path accordingly

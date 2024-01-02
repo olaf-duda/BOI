@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
 import { decode } from './polyline.js'
-import '../BOI/global.js'
+import '../global.js'
 import {createRequest, createRequestFromExactVal} from './createRequest.js'
 
 import * as Location from 'expo-location';
@@ -28,17 +28,14 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
     let i = 0;
 
     while(currentNeededTime > 17){
-        
-        //console.log(result_points[i]);
+
         const new_subroute = await findStations(result_points[i], destinationCoordinates, kdTree, routeType, noOfSubstations);
 
         i++;
         result_points.push(new_subroute[0]);
-        //console.log(new_subroute[0] + ' ' + new_subroute[1]);
         full_route.push(decode(new_subroute[1]));
 
         const requestBody = createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE")
-        //console.log("zwykly request", createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE"))
         const response = await axios.post(global.otpApiUrl, requestBody, {
         headers: {
             'Content-Type': 'application/json',
@@ -114,7 +111,11 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
       }
 
     for(var i = 0; i<numOfStations; i++){
-        const response2 = await axios.post(global.otpApiUrl, createRequest(routeType, previous_stop, nearestStops[i], "BICYCLE"), {
+        if(previous_stop.lat == nearestStops[i].lat && previous_stop.lon == nearestStops[i].lon)
+            continue;
+
+        const requestBody2 = createRequest(routeType, previous_stop, nearestStops[i], "BICYCLE");
+        const response2 = await axios.post(global.otpApiUrl, requestBody2, {
         headers: {
             'Content-Type': 'application/json',
         },
@@ -124,13 +125,11 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
 
         // Parse JSON string to JavaScript object
         const responseDataObject = JSON.parse(responseDataJson);
+
         // Now you can access properties like plan.itineraries[0]
         let durationInMinutes = (responseDataObject.plan.itineraries[0].endTime - responseDataObject.plan.itineraries[0].startTime) / (1000 * 60);
         if (durationInMinutes <= 17){
             const encodedRouteToNearestStop = responseDataObject.plan.itineraries[0].legs[0].legGeometry.points;
-
-            //console.log("czas traski " + durationInMinutes);
-            //console.log("ktory sasiad " + i)
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }

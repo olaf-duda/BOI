@@ -14,7 +14,7 @@ import KDTree from '../../algorithms/kdtree.js';
 import Station from '../../interfaces/Stations.js'
 import useBikeStationList from '../../hook/bikeData.js';
 
-import '../../BOI/global.js'
+import '../../global.js'
 
 
 export default function TabTwoScreen() {
