@@ -16,8 +16,6 @@ const useBikeStationList =  () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    console.log("downloading data from API");
-
     const fetchData = async () => {
         try {
             // const fileContent = await RNFS.readfile(filePath, 'utf8');
