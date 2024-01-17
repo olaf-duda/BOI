@@ -134,7 +134,7 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
         }
     }
     if(noOfSubstations<10)
-        findStations(previous_stop, final_stop, kdTree, routeType, noOfSubstations+1);
+        await findStations(previous_stop, final_stop, kdTree, routeType, noOfSubstations+1);
     console.log("didnt find station");
     
     return [nearestStops[i], encodedRouteToNearestStop];

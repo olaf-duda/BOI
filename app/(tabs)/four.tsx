@@ -10,7 +10,7 @@ import useBikeStationList from '../../hook/bikeData.js';
 import Station from '../../interfaces/Stations.js'
 import  KDTree  from '../../algorithms/kdtree.js';
 import { createRequest } from '../../algorithms/createRequest.js'
-import { CheapRoute } from '../../algorithms/cheapRouteDuration.js'
+import { CheapRouteTime } from '../../algorithms/cheapRouteDuration.js'
 import { decode } from '../../algorithms/polyline.js'
 import * as FileSystem from 'expo-file-system'
 const { StorageAccessFramework } = FileSystem;
@@ -86,22 +86,16 @@ export default function TabFourScreen() {
             
 
             setIsEnabled(true);
-    
+            
             contentCheap += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                     {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
-
-            console.log('(BALANCED) size of Content Cheap is: ' + contentCheap.length);
             contentCheap += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                     {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
-
-            console.log('(QUICK) size of Content Cheap is: ' + contentCheap.length);
             contentCheap += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                     {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
-
-            console.log('(FLAT) size of Content Cheap is: ' + contentCheap.length);
             contentCheap += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                     {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
-
+            
             console.log('(SAFE) size of Content Cheap is: ' + contentCheap.length);
         }
 
@@ -119,7 +113,6 @@ export default function TabFourScreen() {
 
         }
         else {
-          console.log("gowno")
           alert("You must allow permission to save.")
         }
       
@@ -137,7 +130,6 @@ export default function TabFourScreen() {
 
         }
         else {
-          console.log("gowno")
           alert("You must allow permission to save.")
         }
 
@@ -151,7 +143,7 @@ export default function TabFourScreen() {
 
   const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: { lat: number, lon: number },
     destinationCoordinates: { lat: number, lon: number }, color: string, kdTree: KDTree) => {
-    let content = "";
+    let returnContent = "";
     console.log("begin collecting data");
     const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
 
@@ -161,32 +153,28 @@ export default function TabFourScreen() {
       },
     });
 
-    let durationInMinutes = Math.round((response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60));
+    let durationInMinutes = await Math.round((response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60));
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
     setBikeTime(Math.round(durationInMinutes))
+    let distance = Math.round(calculateHaversineDistance(startingCoordinates, destinationCoordinates));
 
     if(durationInMinutes <=17 || !isFreeRouteEnabled ){
-      let distance = Math.round(calculateHaversineDistance(startingCoordinates, destinationCoordinates));
-      content = bicycleRouteType + ' ' + durationInMinutes + ' ' + distance + '\n'; 
+      returnContent = await bicycleRouteType + ' ' + durationInMinutes + ' ' + distance + '\n'; 
     }
     else if (isFreeRouteEnabled){
-        // let time = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
-        // let distance = Math.sqrt((startingCoordinates.lat - destinationCoordinates.lat) ** 2 + (startingCoordinates.lon - destinationCoordinates.lon) ** 2);
+        let time = await CheapRouteTime(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+        if(time == -1){
+            console.log("Found non-existent route");
+            return "";
+        }
+        let distance = Math.sqrt((startingCoordinates.lat - destinationCoordinates.lat) ** 2 + (startingCoordinates.lon - destinationCoordinates.lon) ** 2);
 
-        // const content = bicycleRouteType + ': ' + durationInMinutes;
-
-        // FileSystem.writeAsStringAsync(FileSystem.documentDirectory + 'dataCollection.txt', content)
-        //   .then(() => {
-        //     console.log('File written successfully! ' + content);
-        //   })
-        //   .catch(error => {
-        //     console.error('Error writing to file:', error);
-        //   });
+        returnContent = await bicycleRouteType + ' ' + time + ' ' + distance + '\n'; 
     }
 
     console.log("finished writing in the data");
-    return content;
+    return returnContent;
   }
   
   const handleStationAddress = useCallback( () => {

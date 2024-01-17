@@ -22,20 +22,33 @@ function distance(pointA, pointB) {
     });
 }
 
-export async function CheapRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
+export async function CheapRouteTime(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
     var currentNeededTime = routeTime;
     const noOfSubstations = Math.ceil(routeTime / 17) - 1;
     let result_points = [startingCoordinates];
     let full_route = [];
     let i = 0;
 
+    
+
     while(currentNeededTime > 17){
 
-        const new_subroute = await findStations(result_points[i], destinationCoordinates, kdTree, routeType, noOfSubstations);
+        const new_subroute = await findStations(result_points, i, destinationCoordinates, kdTree, routeType, noOfSubstations);
+
+        if(new_subroute[1] == "")
+            return -1;
+
+        for (const object of result_points) {
+            if (object.lat == new_subroute[0].lat && object.lon == new_subroute[0].lon) {
+                return -1;
+            }
+        }
 
         i++;
         result_points.push(new_subroute[0]);
+        
         full_route.push(decode(new_subroute[1]));
+
 
         const requestBody = createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE")
         const response = await axios.post(global.otpApiUrl, requestBody, {
@@ -55,16 +68,15 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
     return routeDuration;
 }
 
-async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSubstations){
+async function findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations){
 
-    //New otp route from previous_stop to final_stop
+    //New otp route from result_points[previous_stop_index] to final_stop
 
-    const response = await axios.post(global.otpApiUrl, createRequest(routeType, previous_stop, final_stop, "BICYCLE"), {
+    const response = await axios.post(global.otpApiUrl, createRequest(routeType, result_points[previous_stop_index], final_stop, "BICYCLE"), {
     headers: {
         'Content-Type': 'application/json',
     },
     });
-    //console.log("rispons", response.data.data)
     const points = decode(response.data.data.plan.itineraries[0].legs[0].legGeometry.points);
 
     var totalDistance = 0;
@@ -98,7 +110,6 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
         }
     }
 
-    console.log('found point is: ' + [found_point[1], found_point[0]]);
     const numOfStations = 6;
     const nearestStops = kdTree.findNearestNeighbors([found_point[1], found_point[0]], numOfStations);
     const mapRef = useRef<WebView | null>(null);
@@ -112,10 +123,10 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
       }
 
     for(var i = 0; i<numOfStations; i++){
-        if(previous_stop.lat == nearestStops[i].lat && previous_stop.lon == nearestStops[i].lon)
+        if(result_points.includes(nearestStops[i]) || result_points[previous_stop_index].lat == nearestStops[i].lat && result_points[previous_stop_index].lon == nearestStops[i].lon)
             continue;
 
-        const requestBody2 = createRequest(routeType, previous_stop, nearestStops[i], "BICYCLE");
+        const requestBody2 = createRequest(routeType, result_points[previous_stop_index], nearestStops[i], "BICYCLE");
         const response2 = await axios.post(global.otpApiUrl, requestBody2, {
         headers: {
             'Content-Type': 'application/json',
@@ -135,9 +146,11 @@ async function findStations(previous_stop, final_stop, kdTree, routeType, noOfSu
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
-    if(noOfSubstations<10)
-        findStations(previous_stop, final_stop, kdTree, routeType, noOfSubstations+1);
+    if(noOfSubstations<=10){
+        await noOfSubstations++;
+        return await findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations);
+    }
     console.log("didnt find station");
     
-    return [nearestStops[i], encodedRouteToNearestStop];
+    return [nearestStops[i], ""];
 }
