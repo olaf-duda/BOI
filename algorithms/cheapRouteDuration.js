@@ -13,8 +13,6 @@ import * as Location from 'expo-location';
 import  KDTree  from './kdtree.js';
 
 let routeDuration = 0;
-
-
 function distance(pointA, pointB) {
     return new Promise(resolve => {
         const dist = Math.sqrt((pointA[0] - pointB[0]) ** 2 + (pointA[1] - pointB[1]) ** 2);
@@ -23,6 +21,7 @@ function distance(pointA, pointB) {
 }
 
 export async function CheapRouteTime(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
+    routeDuration = 0;
     var currentNeededTime = routeTime;
     const noOfSubstations = Math.ceil(routeTime / 17) - 1;
     let result_points = [startingCoordinates];
@@ -143,6 +142,7 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
         if (durationInMinutes <= 17){
             const encodedRouteToNearestStop = responseDataObject.plan.itineraries[0].legs[0].legGeometry.points;
             routeDuration += durationInMinutes;
+            console.log("Adding " + durationInMinutes + " minutes");
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }

@@ -10,12 +10,12 @@ import useBikeStationList from '../../hook/bikeData.js';
 import Station from '../../interfaces/Stations.js'
 import  KDTree  from '../../algorithms/kdtree.js';
 import { createRequest } from '../../algorithms/createRequest.js'
-import { CheapRouteTime } from '../../algorithms/cheapRouteDuration.js'
+import { CheapRoute } from '../../algorithms/cheapRoute.js'
 import { decode } from '../../algorithms/polyline.js'
 import * as FileSystem from 'expo-file-system'
+
 const { StorageAccessFramework } = FileSystem;
 export default function TabFourScreen() {
-  const [isFreeRouteEnabled, setIsEnabled] = useState(true);
   const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
   const [routeTime, setRouteTime] = useState(0);
   const [walk1Time, setWalk1Time] = useState(0);
@@ -55,46 +55,44 @@ export default function TabFourScreen() {
         ]);
         const kdTree = new KDTree(stationCoordinates);
 
+        let previous_pairs: number[][] = [[]];
         let contentNormal = ""
         let contentCheap = ""
-        for(let i = 0; i < 100; i++){
-            const firstIndex = Math.floor(Math.random()*stationCoordinates.length);
+        for(let i = 0; i < stationCoordinates.length/2; i++){
+            const firstIndex = i;
             let secondIndex = Math.floor(Math.random()*stationCoordinates.length);
             
-            while(secondIndex == firstIndex) 
+            while(secondIndex == firstIndex || previous_pairs.includes([Math.min(firstIndex, secondIndex), Math.max(firstIndex, secondIndex)])) 
               secondIndex = Math.floor(Math.random()*stationCoordinates.length);
 
-            setIsEnabled(false);
+            previous_pairs.push([Math.min(firstIndex, secondIndex), Math.max(firstIndex, secondIndex)]);
             
             console.log('iteration number: ' + i + ': ' + stationCoordinates[firstIndex] + ' and ' + stationCoordinates[secondIndex] );
             contentNormal += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
             console.log('(BALANCED) size of Content Normal is: ' + contentNormal.length);
             contentNormal += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
             console.log('(QUICK) size of Content Normal is: ' + contentNormal.length);
             contentNormal += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
             console.log('(FLAT) size of Content Normal is: ' + contentNormal.length);
             contentNormal += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
             console.log('(SAFE) size of Content Normal is: ' + contentNormal.length);
             
-
-            setIsEnabled(true);
-            
             contentCheap += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
             contentCheap += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
             contentCheap += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
             contentCheap += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree);
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
             
             console.log('(SAFE) size of Content Cheap is: ' + contentCheap.length);
         }
@@ -142,7 +140,7 @@ export default function TabFourScreen() {
   }
 
   const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: { lat: number, lon: number },
-    destinationCoordinates: { lat: number, lon: number }, color: string, kdTree: KDTree) => {
+    destinationCoordinates: { lat: number, lon: number }, color: string, kdTree: KDTree, isFreeRouteEnabled: boolean) => {
     let returnContent = "";
     console.log("begin collecting data");
     const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
@@ -160,17 +158,17 @@ export default function TabFourScreen() {
     let distance = Math.round(calculateHaversineDistance(startingCoordinates, destinationCoordinates));
 
     if(durationInMinutes <=17 || !isFreeRouteEnabled ){
-      returnContent = await bicycleRouteType + ' ' + durationInMinutes + ' ' + distance + '\n'; 
+      returnContent = await bicycleRouteType + isFreeRouteEnabled + ' ' + durationInMinutes + ' ' + distance + '\n'; 
     }
     else if (isFreeRouteEnabled){
-        let time = await CheapRouteTime(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      let time = cheapRouteOutput[1] as number
         if(time == -1){
             console.log("Found non-existent route");
-            return "";
+            return bicycleRouteType + ' ' + 'NaN' + ' ' + distance + '\n'; 
         }
-        let distance = Math.sqrt((startingCoordinates.lat - destinationCoordinates.lat) ** 2 + (startingCoordinates.lon - destinationCoordinates.lon) ** 2);
 
-        returnContent = await bicycleRouteType + ' ' + time + ' ' + distance + '\n'; 
+        returnContent = await bicycleRouteType + isFreeRouteEnabled + ' ' + Math.round(time) + ' ' + distance + '\n'; 
     }
 
     console.log("finished writing in the data");

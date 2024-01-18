@@ -8,8 +8,6 @@ import '../global.js'
 
 
 // We for now read from a local file instead of API
- //const apiKey = 'xEsFhYZR5jpO1Ug1';
- const apiUrl = `https://5c77-79-191-133-36.ngrok-free.app`;
 
 const useBikeStationList =  () => {
     const [bikeStations, setBikeStations] = useState([]);
@@ -18,20 +16,6 @@ const useBikeStationList =  () => {
 
     const fetchData = async () => {
         try {
-            // const fileContent = await RNFS.readfile(filePath, 'utf8');
-            // const data = JSON.parse(fileContent);
-
-            // console.log(data[0]);
-            // setBikeStations(data[0].cities[0].places);
-
-            // setIsLoading(false);
-
-            //We for now read from a local file instead of API
-            // const response = await axios.get(apiUrl, {
-            //     headers: {
-            //         'Api-Key': apiKey,
-            //     },
-            // });
             const response = await axios.get(global.ngrokUrl);
             setBikeStations(response.data[0].cities[0].places);
             console.log("number of bikes", bikeStations.length)

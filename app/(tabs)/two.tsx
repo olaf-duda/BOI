@@ -176,7 +176,11 @@ export default function TabTwoScreen() {
       });
     }
     else if (isFreeRouteEnabled){
-      let points = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      let points = cheapRouteOutput[0] as number[][][]
+      let routeDuration = cheapRouteOutput[1] as number
+      setBikeTime(Math.round(routeDuration))
+
       drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
       for(let j = 0; j<points.length; j++) { 
         for (let i = 0; i < points[j].length-1; i++) {
