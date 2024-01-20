@@ -179,6 +179,7 @@ export default function TabTwoScreen() {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
       let points = cheapRouteOutput[0] as number[][][]
       let routeDuration = cheapRouteOutput[1] as number
+      console.log("route duration" + routeDuration)
       setBikeTime(Math.round(routeDuration))
 
       drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);

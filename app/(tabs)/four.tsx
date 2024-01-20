@@ -58,7 +58,7 @@ export default function TabFourScreen() {
         let previous_pairs: number[][] = [[]];
         let contentNormal = ""
         let contentCheap = ""
-        for(let i = 0; i < stationCoordinates.length/2; i++){
+        for(let i = 0; i < stationCoordinates.length/10; i++){
             const firstIndex = i;
             let secondIndex = Math.floor(Math.random()*stationCoordinates.length);
             

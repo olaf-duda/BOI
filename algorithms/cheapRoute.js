@@ -13,7 +13,7 @@ import * as Location from 'expo-location';
 import  KDTree  from './kdtree.js';
 
 let routeDuration = 0;
-let result_points = [startingCoordinates];
+let result_points = [];
 let full_route = [];
 
 export async function CheapRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
@@ -21,11 +21,16 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
     result_points = [startingCoordinates];
     full_route = [];
 
-    let currentNeededTime = routeTime;
-    let noOfSubstations = Math.ceil(routeTime / 17) - 1;
-    let i = 0;
+    if(await findRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType, [])) {
+        //console.log("Found the route:");
+       // console.log( " ",result_points, "full rut")
+        return [full_route, routeDuration];
 
-    findRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType, []);
+    }
+    else {
+        console.log("gowno nie znalazlo nic")
+        return [-1, -1];
+    }
 
     // while(currentNeededTime > 17){
     //     noOfSubstations = Math.ceil(currentNeededTime / 17) - 1;
@@ -62,40 +67,61 @@ export async function CheapRoute(startingCoordinates, destinationCoordinates, ro
     //     }
     // }
 
-    console.log("Found the route:");
-    console.log(full_route.length, "full rut")
-    return [full_route, routeDuration];
+    
 }
 
 async function findRoute(startingCoordinates, destinationCoordinates, currentNeededTime, kdTree, routeType, visitedStations) {
-    let noOfSubstations = Math.ceil(currentNeededTime / 17) - 1;
-    if(currentNeededTime > 17) {
-        const new_subroute = await findStations(result_points, result_points.length-1, destinationCoordinates, kdTree, routeType, noOfSubstations, visitedStations);
+    const noOfSubstations = Math.ceil(currentNeededTime / 17) - 1;
 
-        if(new_subroute[1] != "") {
-            result_points.push(new_subroute[0]);
-            full_route.push(decode(new_subroute[1]));
+    const coordinatesString = JSON.stringify(startingCoordinates);
 
-            const requestBody = createRequest(routeType, new_subroute[0], destinationCoordinates, "BICYCLE")
-            const response = await axios.post(global.otpApiUrl, requestBody, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            });
+    // Check if the coordinates are already visited
+    if (!visitedStations.includes(coordinatesString)) {
+        visitedStations.push(coordinatesString);
+    }
+    //console.log(visitedStations[0], " " , startingCoordinates)
+    //console.log("visited stations" + visitedStations.length)
 
-            currentNeededTime = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
+    const findStationsOutput = await findStations(result_points, result_points.length-1, destinationCoordinates, kdTree, routeType, noOfSubstations, visitedStations);
 
-            findRoute(startingCoordinates, destinationCoordinates, currentNeededTime, kdTree, routeType, visitedStations);
+    //console.log("find Stations " + findStationsOutput[0].lat + " " + findStationsOutput[0].lon)
+
+    if(findStationsOutput[1] != "") {
+        const new_stop = findStationsOutput[0];
+        const new_subroute = decode(findStationsOutput[1]);
+
+        result_points.push(new_stop);
+        full_route.push(new_subroute);
+        //console.log(full_route.length + "full route elements")
+        const requestBody = createRequest(routeType, new_stop, destinationCoordinates, "BICYCLE")
+        const response = await axios.post(global.otpApiUrl, requestBody, {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        });
+
+        let newCurrentNeededTime = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
+        if (newCurrentNeededTime <= 17){
+            routeDuration += newCurrentNeededTime;
+            full_route.push(decode(response.data.data.plan.itineraries[0].legs[0].legGeometry.points));
+            return true;
         }
-        else {
-            visitedStations.push(new_subroute[0]);
-            findRoute(startingCoordinates, destinationCoordinates, currentNeededTime, kdTree, routeType, visitedStations);
 
+        const findRouteResult = await findRoute(new_stop, destinationCoordinates, newCurrentNeededTime, kdTree, routeType, visitedStations);
+        
+        if(findRouteResult) {
+            return true;
         }
 
+        routeDuration = currentNeededTime - newCurrentNeededTime;
+        result_points.pop();
+        full_route.pop();
+
+        return await findRoute(startingCoordinates, destinationCoordinates, currentNeededTime, kdTree, routeType, visitedStations);
     }
     else {
-
+       //console.log("false gowno siema")
+        return false;
     }
 }
 
@@ -141,7 +167,7 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
         }
     }
 
-    const numOfStations = 6;
+    const numOfStations = 10;
     const nearestStops = kdTree.findNearestNeighbors([found_point[1], found_point[0]], numOfStations);
     const mapRef = useRef<WebView | null>(null);
     if (mapRef.current) {
@@ -154,7 +180,10 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
       }
 
     for(var i = 0; i<numOfStations; i++){
-        if(result_points.includes(nearestStops[i]) || result_points[previous_stop_index].lat == nearestStops[i].lat && result_points[previous_stop_index].lon == nearestStops[i].lon)
+        //console.log(visitedStations, "\n", nearestStops[i])
+        if(result_points.includes(nearestStops[i]) || visitedStations.includes(JSON.stringify(nearestStops[i])) || 
+        (result_points[previous_stop_index].lat == nearestStops[i].lat && 
+        result_points[previous_stop_index].lon == nearestStops[i].lon))
             continue;
 
         const requestBody2 = createRequest(routeType, result_points[previous_stop_index], nearestStops[i], "BICYCLE");
@@ -174,16 +203,16 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
         if (durationInMinutes <= 17){
             const encodedRouteToNearestStop = responseDataObject.plan.itineraries[0].legs[0].legGeometry.points;
             routeDuration += durationInMinutes;
-            console.log("Adding " + durationInMinutes + " minutes");
+            //console.log("Adding " + durationInMinutes + " minutes");
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
 
-    if(noOfSubstations<=10){
-        await noOfSubstations++;
-        return await findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations);
-    }
-    console.log("didnt find station");
+    // if(noOfSubstations<=10){
+    //     await noOfSubstations++;
+    //     return await findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations);
+    // }
+    //console.log("didnt find station");
     
     return [nearestStops[i], ""];
 }
