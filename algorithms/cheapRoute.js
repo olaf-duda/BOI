@@ -93,6 +93,8 @@ async function findRoute(startingCoordinates, destinationCoordinates, currentNee
         const new_subroute = decode(findStationsOutput[1]);
 
         result_points.push(new_stop);
+        if(result_points.length > 21)
+            return false
         full_route.push(new_subroute);
 
         console.log(full_route.length + "full route elements")

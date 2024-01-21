@@ -20,7 +20,8 @@ function distance(pointA, pointB) {
     });
 }
 
-export async function CheapRouteTime(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
+export async function CheapRoute(startingCoordinates, destinationCoordinates, routeTime, kdTree, routeType) {
+    console.log("tastatasrars");
     routeDuration = 0;
     var currentNeededTime = routeTime;
     const noOfSubstations = Math.ceil(routeTime / 17) - 1;
@@ -35,11 +36,11 @@ export async function CheapRouteTime(startingCoordinates, destinationCoordinates
         const new_subroute = await findStations(result_points, i, destinationCoordinates, kdTree, routeType, noOfSubstations);
 
         if(new_subroute[1] == "")
-            return -1;
+            return [-1, -1];
 
         for (const object of result_points) {
             if (object.lat == new_subroute[0].lat && object.lon == new_subroute[0].lon) {
-                return -1;
+                return [-1, -1];
             }
         }
 
@@ -64,7 +65,7 @@ export async function CheapRouteTime(startingCoordinates, destinationCoordinates
     }
 
     console.log(routeDuration, "full rut time")
-    return routeDuration;
+    return [full_route, routeDuration];
 }
 
 async function findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations){
@@ -109,7 +110,7 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
         }
     }
 
-    const numOfStations = 6;
+    const numOfStations = 10;
     const nearestStops = kdTree.findNearestNeighbors([found_point[1], found_point[0]], numOfStations);
     const mapRef = useRef<WebView | null>(null);
     if (mapRef.current) {
@@ -146,7 +147,7 @@ async function findStations(result_points, previous_stop_index, final_stop, kdTr
             return [nearestStops[i], encodedRouteToNearestStop];
         }
     }
-    if(noOfSubstations<=10){
+    if(noOfSubstations<=15){
         await noOfSubstations++;
         return await findStations(result_points, previous_stop_index, final_stop, kdTree, routeType, noOfSubstations);
     }
