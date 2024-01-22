@@ -153,9 +153,9 @@ export default function TabTwoScreen() {
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
-    if(travelType=="BICYCLE")
+    if (travelType == "BICYCLE")
       setBikeTime(Math.round(durationInMinutes))
-    else if(isDestinationWalk) {
+    else if (isDestinationWalk) {
       setWalk2Time(Math.round(durationInMinutes))
       isDestinationWalk = !isDestinationWalk;
     }
@@ -164,7 +164,7 @@ export default function TabTwoScreen() {
       isDestinationWalk = !isDestinationWalk;
     }
 
-    if(durationInMinutes <=17 || travelType == "WALK" || !isFreeRouteEnabled ){
+    if (durationInMinutes <= 17 || travelType == "WALK" || !isFreeRouteEnabled) {
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -175,23 +175,25 @@ export default function TabTwoScreen() {
         }
       });
     }
-    else if (isFreeRouteEnabled){
+    else if (isFreeRouteEnabled) {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
       let points = cheapRouteOutput[0] as number[][][]
       let routeDuration = cheapRouteOutput[1] as number
-      console.log("route duration" + routeDuration)
+      console.log("route duration: " + routeDuration)
       setBikeTime(Math.round(routeDuration))
 
-      drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
-      for(let j = 0; j<points.length; j++) { 
-        for (let i = 0; i < points[j].length-1; i++) {
-          const [lat1, lon1] = points[j][i];
-          const [lat2, lon2] = points[j][i + 1];
-          drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
+      if (routeDuration != -1) {
+        drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
+        for (let j = 0; j < points.length; j++) {
+          for (let i = 0; i < points[j].length - 1; i++) {
+            const [lat1, lon1] = points[j][i];
+            const [lat2, lon2] = points[j][i + 1];
+            drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
+          }
+          if (j !== points.length - 1)
+            addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], false)
         }
-        if(j !== points.length-1)
-          addNewMarker(points[j][points[j].length-1][1], points[j][points[j].length-1][0], false)
-      }   
+      }
     }
     else {
 
@@ -295,22 +297,22 @@ export default function TabTwoScreen() {
             <Text style={styles.durationText}>
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
               {walk1Time} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="directions-bike" size={24} color="#36aa12" />
-              {' '} 
+              {' '}
               {bikeTime} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
 
               {walk2Time} min
 
-              </Text>
+            </Text>
           )}
         </View>
         <View style={{ flex: 0.5, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
