@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { View, TouchableOpacity, Switch, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, PermissionsAndroid } from 'react-native';
+import { View, TouchableOpacity, Switch, Text, StyleSheet, SafeAreaView, StatusBar, TextInput, Image, PermissionsAndroid, Alert, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import html_script from '../html_script.js';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -19,6 +19,8 @@ import '../../global.js'
 
 export default function TabTwoScreen() {
   const [isFreeRouteEnabled, setIsEnabled] = useState(false);
+  const [isLoadingSpinner, setIsLoading] = useState(false);
+  const [routeCost, setRouteCost] = useState(-1);
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const [startingAddress, setStartingAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
@@ -34,28 +36,78 @@ export default function TabTwoScreen() {
   const [walk2Time, setWalk2Time] = useState(0);
   let isDestinationWalk = false;
 
-  const handleBalancedRoute = () => {
-    findRoute("TRIANGLE");
+  const handleBalancedRoute = async () => {
+    setIsLoading(true);
     setSelectedRoute("TRIANGLE");
+    await findRoute("TRIANGLE");
+    setIsLoading(false);
   }
 
-  const handleFastRoute = () => {
-    findRoute("QUICK");
+  const handleFastRoute = async () => {
+    setIsLoading(true);
     setSelectedRoute("QUICK");
+    await findRoute("QUICK");
+    setIsLoading(false);
   }
 
-  const handleSafeRoute = () => {
-    findRoute("SAFE");
+  const handleSafeRoute = async () => {
+    setIsLoading(true);
     setSelectedRoute("SAFE");
+    await findRoute("SAFE");
+    setIsLoading(false);
   }
 
-  const handleFlatRoute = () => {
-    findRoute("FLAT");
+  const handleFlatRoute = async () => {
+    setIsLoading(true);
     setSelectedRoute("FLAT");
-
+    await findRoute("FLAT");
+    setIsLoading(false);
   }
+
+  const SettleCostTime = (minutes: number) => {
+    console.log("Setting cost time")
+    console.log(bikeTime)
+    if (isFreeRouteEnabled) {
+      setRouteCost(0);
+      return;
+    }
+    if (minutes <= 20 && minutes > 0) {
+      console.log("setting route cost to 0 2.")
+      setRouteCost(0);
+    }
+    else if (minutes >= 21 && minutes <= 60) {
+      console.log("setting route cost to 1")
+      setRouteCost(1);
+    }
+    else if (minutes > 60 && minutes <= 120) {
+      console.log("setting route cost to 3")
+      setRouteCost(3);
+    }
+    else if (minutes > 120 && minutes <= 180) {
+      setRouteCost(5);
+    }
+    else if (minutes > 180 && minutes <= 720) {
+      // probability of happening is extremely low
+      let hours = Math.ceil(minutes / 60) - 3;
+      setRouteCost(hours * 7);
+    }
+    else if (minutes > 720) {
+      // penalty for overrenting a bike
+      setRouteCost(200);
+    }
+  }
+
+  const ShowPopup = (title: string, message: string) => {
+    Alert.alert(
+      title,
+      message,
+      [{ text: "OK", onPress: () => console.log("OK Pressed") }],
+      { cancelable: false }
+    );
+  };
 
   const handleStartingAddressSubmit = useCallback(async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startingAddress)}`
@@ -69,9 +121,11 @@ export default function TabTwoScreen() {
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
+    setIsLoading(false);
   }, [startingAddress]);
 
   const handleDestinationAddressSubmit = useCallback(async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destinationAddress)}`
@@ -85,9 +139,11 @@ export default function TabTwoScreen() {
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
+    setIsLoading(false);
   }, [destinationAddress]);
 
   const handleSetStartingLocation = async () => {
+    setIsLoading(true);
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -103,6 +159,7 @@ export default function TabTwoScreen() {
     } catch (error) {
       console.error('Error getting location:', error);
     }
+    setIsLoading(false);
   };
 
   const findRoute = async (bicycleRouteType: string) => {
@@ -123,20 +180,24 @@ export default function TabTwoScreen() {
         const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
         const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
-        otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
-        otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue", kdTree)
-        otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
+        var result = await otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue", kdTree)
+        if (result != -1) {
+          await otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
+          await otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
 
-        addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
-        addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
-        addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, false);
-        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
+          addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
+          addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
+          addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, false);
+          addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
+        }
+
       }
       return 1;
     } catch (error) {
       console.error('Error fetching data:', error);
       return null;
     }
+
   }
 
   const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: { lat: number, lon: number },
@@ -153,9 +214,12 @@ export default function TabTwoScreen() {
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
 
-    if(travelType=="BICYCLE")
+    if (travelType == "BICYCLE") {
+      console.log("setting bike time 1.")
       setBikeTime(Math.round(durationInMinutes))
-    else if(isDestinationWalk) {
+      SettleCostTime(Math.round(durationInMinutes));
+    }
+    else if (isDestinationWalk) {
       setWalk2Time(Math.round(durationInMinutes))
       isDestinationWalk = !isDestinationWalk;
     }
@@ -164,7 +228,7 @@ export default function TabTwoScreen() {
       isDestinationWalk = !isDestinationWalk;
     }
 
-    if(durationInMinutes <=17 || travelType == "WALK" || !isFreeRouteEnabled ){
+    if (durationInMinutes <= 17 || travelType == "WALK" || !isFreeRouteEnabled) {
       legs.forEach((leg: { legGeometry: any; }) => {
         const legGeometry = leg.legGeometry;
         const points = decode(legGeometry.points);
@@ -175,27 +239,43 @@ export default function TabTwoScreen() {
         }
       });
     }
-    else if (isFreeRouteEnabled){
+    else if (isFreeRouteEnabled) {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
+      const [CRO1, CRO2] = cheapRouteOutput;
+      if (CRO2 == -1) {
+        const title = "Warning"
+        const message = "We're sorry, but the route you tried to find is impossible to traverse without additional payment. If you still want to know the route, unselect the \"Free route\" mode."
+        clearMap();
+        setWalk1Time(0);
+        setWalk2Time(0);
+        setBikeTime(0);
+        setSelectedRoute("")
+        setRouteCost(-1)
+        ShowPopup(title, message);
+        return -1;
+      }
       let points = cheapRouteOutput[0] as number[][][]
       let routeDuration = cheapRouteOutput[1] as number
       console.log("route duration" + routeDuration)
+      console.log("setting bike time 2.")
       setBikeTime(Math.round(routeDuration))
+      SettleCostTime(Math.round(routeDuration));
 
       drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
-      for(let j = 0; j<points.length; j++) { 
-        for (let i = 0; i < points[j].length-1; i++) {
+      for (let j = 0; j < points.length; j++) {
+        for (let i = 0; i < points[j].length - 1; i++) {
           const [lat1, lon1] = points[j][i];
           const [lat2, lon2] = points[j][i + 1];
           drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
-        if(j !== points.length-1)
-          addNewMarker(points[j][points[j].length-1][1], points[j][points[j].length-1][0], false)
-      }   
+        if (j !== points.length - 1)
+          addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], false)
+      }
     }
     else {
 
     }
+    return 0;
   }
 
   const clearMap = () => {
@@ -256,6 +336,11 @@ export default function TabTwoScreen() {
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
+        {isLoadingSpinner && (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        )}
         <View style={styles.addressInputContainer}>
           <TextInput
             style={styles.addressInput}
@@ -295,34 +380,43 @@ export default function TabTwoScreen() {
             <Text style={styles.durationText}>
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
               {walk1Time} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="directions-bike" size={24} color="#36aa12" />
-              {' '} 
+              {' '}
               {bikeTime} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
 
               {walk2Time} min
 
-              </Text>
+            </Text>
           )}
         </View>
         <View style={{ flex: 0.5, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
           <View style={{ height: 7 }}></View>
-          <Text style={styles.label}>Free route mode:</Text>
-          <Switch
-            trackColor={{ false: "#767577", true: "#77ee44" }}
-            thumbColor={isFreeRouteEnabled ? "#339933" : "#f4f3f4"}
-            ios_backgroundColor="#3e3e3e"
-            onValueChange={toggleSwitch}
-            value={isFreeRouteEnabled}
-          />
+          <View style={styles.splitContainer}>
+            <View style={styles.leftContainer}>
+              <Text style={styles.label}>Free route mode:</Text>
+              <Switch
+                trackColor={{ false: "#767577", true: "#77ee44" }}
+                thumbColor={isFreeRouteEnabled ? "#339933" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleSwitch}
+                value={isFreeRouteEnabled}
+              />
+            </View>
+            <View style={styles.rightContainer}>
+              <Text style={styles.label}>Cost of your route:</Text>
+              <Text style={[routeCost == 0 ? styles.rightText : styles.label]}>
+                {routeCost == -1 ? "" : routeCost == 0 ? "FREE!" : routeCost + " zł"}</Text>
+            </View>
+          </View>
           <Text style={styles.label}>Choose a route type:</Text>
           <View style={styles.buttonArea}>
             <TouchableOpacity
@@ -373,6 +467,13 @@ const styles = StyleSheet.create({
   selectedText: {
     color: 'black'
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    zIndex: 1000, // Ensure it covers other elements
+  },
   label: {
     marginRight: 10, // Space between the label and the switch
     fontSize: 16, // Adjust the font size as needed
@@ -389,6 +490,26 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
+  },
+
+  splitContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  leftContainer: {
+    width: '50%',
+    alignItems: 'center',
+  },
+  rightContainer: {
+    width: '50%',
+    alignItems: 'center',
+  },
+  rightText: {
+    marginRight: 10, // Space between the label and the switch
+    fontSize: 16, // Adjust the font size as needed
+    color: '#77ee44',
   },
   switchContainer: {
     // Adjust this style as needed
@@ -442,3 +563,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+
+
+
+
+
+
+
+
+
+
