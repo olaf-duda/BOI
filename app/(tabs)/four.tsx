@@ -26,6 +26,9 @@ export default function TabFourScreen() {
   const [bikeTime, setBikeTime] = useState(0);
   const [walk2Time, setWalk2Time] = useState(0);
 
+  let minRatio = Number.MAX_VALUE;
+  let maxRatio = Number.MIN_VALUE;
+
   const [destinationCoordinates, setDestinationCoordinates] = useState({ lat: 52.2397, lon: 21.0122 });
   const [startingCoordinates, setStartingCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
 
@@ -68,7 +71,9 @@ export default function TabFourScreen() {
           centreStationCoordinates = [nearestAnchorStation[0].lat, nearestAnchorStation[0].lon]
         }
         let previous_stations: number[] = [];
-        let contentNormal = ""
+        let fractions = [];
+        let contentQuick = ""
+        let contentSafe = ""
         for(let i = 0; i < stationCoordinates.length-1; i++){
             
             let secondIndex = Math.floor(Math.random()*stationCoordinates.length);
@@ -80,40 +85,56 @@ export default function TabFourScreen() {
             
             console.log('iteration number: ' + i + " " + stationCoordinates[secondIndex] );
             console.log(centreStationCoordinates , stationCoordinates[secondIndex])
-            contentNormal = await otpFindRoute("BICYCLE", "QUICK", {lat: centreStationCoordinates[0], lon: centreStationCoordinates[1]},
+            contentQuick = await otpFindRoute("BICYCLE", "QUICK", {lat: centreStationCoordinates[0], lon: centreStationCoordinates[1]},
                     {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+            contentSafe = await otpFindRoute("BICYCLE", "SAFE", {lat: centreStationCoordinates[0], lon: centreStationCoordinates[1]},
+                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false); 
 
 
             const numberRegex = /\b\d+\b/;
 
-            const match = contentNormal.match(numberRegex);
+            const matchQuick = contentQuick.match(numberRegex);
+            const matchSafe = contentSafe.match(numberRegex);
 
             // Check if a match is found
             let value = 0;
 
-            if (match) {
-                value = parseInt(match[0], 10); // Convert the matched string to an integer
-                console.log("Extracted value:", value);
+            if (matchQuick && matchSafe) {
+                value = parseInt(matchQuick[0], 10); // Convert the matched string to an integer
+                value = value/(parseInt(matchSafe[0], 10));
+                if(maxRatio < value){
+                  maxRatio = value;
+                  console.log(value)
+                }
+                else if(minRatio > value){
+                  minRatio = value;
+                  console.log(value)
+                }
+                fractions.push(value);
             } else {
                 console.log("No number found in the string.");
             }
-            
-            let color = valueToHeatmapColor(value);
-            console.log(color)
-            if (mapRef.current) {
-              const script = `
-                  if (typeof map !== 'undefined') {
-                  L.circle([${stationCoordinates[secondIndex][0]}, ${stationCoordinates[secondIndex][1]}], {
-                    color: '${color.toString()}',
-                    fillColor: '${color.toString()}',
-                    radius: 150
-                  }).addTo(map);
-                  }
-              `;
-              //console.log("Station at:" + lat + " " + lng + "\n");
-              mapRef.current.injectJavaScript(script);
-            }
-           
+        }
+
+        for(let i = 0; i < fractions.length; i++){
+          
+          console.log(fractions[i]);
+          let color = valueToHeatmapColor(fractions[i]);
+
+          console.log(color)
+          if (mapRef.current) {
+            const script = `
+                if (typeof map !== 'undefined') {
+                L.circle([${stationCoordinates[i][0]}, ${stationCoordinates[i][1]}], {
+                  color: '${color.toString()}',
+                  fillColor: '${color.toString()}',
+                  radius: 150
+                }).addTo(map);
+                }
+            `;
+            //console.log("Station at:" + lat + " " + lng + "\n");
+            mapRef.current.injectJavaScript(script);
+          }
         }
       }
       return 1;
@@ -307,7 +328,7 @@ function calculateHaversineDistance(startingCoordinates: { lat: number; lon: num
 }
 function valueToHeatmapColor(value: number) {
   // Normalize the value to the range [0, 1]
-  const normalizedValue = Math.min(Math.max(value / 80, 0), 1);
+  const normalizedValue = (value - minRatio) / (maxRatio - minRatio);
 
   // Set the hue based on the normalized value
   const hue = (normalizedValue - 1) * 240; // 0 (blue) to 240 (red)
