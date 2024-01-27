@@ -160,19 +160,19 @@ export default function TabFourScreen() {
           contentNormal += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
-          console.log('(BALANCED) size of Content Normal is: ' + contentNormal.length);
+          //console.log('(BALANCED) size of Content Normal is: ' + contentNormal.length);
           contentNormal += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
-          console.log('(QUICK) size of Content Normal is: ' + contentNormal.length);
+          //console.log('(QUICK) size of Content Normal is: ' + contentNormal.length);
           contentNormal += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
-          console.log('(FLAT) size of Content Normal is: ' + contentNormal.length);
+          //console.log('(FLAT) size of Content Normal is: ' + contentNormal.length);
           contentNormal += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
 
-          console.log('(SAFE) size of Content Normal is: ' + contentNormal.length);
+          //console.log('(SAFE) size of Content Normal is: ' + contentNormal.length);
           
           contentCheap += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
@@ -183,7 +183,7 @@ export default function TabFourScreen() {
           contentCheap += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
                   {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
           
-          console.log('(SAFE) size of Content Cheap is: ' + contentCheap.length);
+          //console.log('(SAFE) size of Content Cheap is: ' + contentCheap.length);
         }
 
         const permissionsNormal = await StorageAccessFramework.requestDirectoryPermissionsAsync();
@@ -231,7 +231,7 @@ export default function TabFourScreen() {
   const otpFindRoute = async (travelType: string, bicycleRouteType: string, startingCoordinates: { lat: number, lon: number },
     destinationCoordinates: { lat: number, lon: number }, color: string, kdTree: KDTree, isFreeRouteEnabled: boolean) => {
     let returnContent = "";
-    console.log("begin collecting data");
+    //console.log("begin collecting data");
     const requestBody = createRequest(bicycleRouteType, startingCoordinates, destinationCoordinates, travelType);
 
     const response = await axios.post((global as any).otpApiUrl, requestBody, {
@@ -253,14 +253,16 @@ export default function TabFourScreen() {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
       let time = cheapRouteOutput[1] as number
       if(time == -1){
-          console.log("Found non-existent route");
+          console.log("Found non-existent route start" + startingCoordinates.lat + " "+ startingCoordinates.lon);
+          console.log("Found non-existent route end" + destinationCoordinates.lat + " "+ destinationCoordinates.lon);
+          
           return bicycleRouteType + ' ' + 'NaN' + ' ' + distance + '\n'; 
       }
 
         returnContent = await bicycleRouteType + ' ' + Math.round(time) + ' ' + distance + '\n'; 
     }
 
-    console.log("finished writing in the data");
+    //console.log("finished writing in the data");
     return returnContent;
   }
   

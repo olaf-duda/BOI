@@ -29,6 +29,10 @@ class KDTree {
   findNearestNeighbors(queryPoint, k) {
     const neighbors = [];
     this.findNearest(this.root, queryPoint, k, 0, neighbors);
+    console.log("division distance " + this.distance([52.19984426922548, 21.050969242778226], queryPoint))
+    console.log("first distance " + this.distance(neighbors[0], queryPoint))
+    console.log("last distance " + this.distance(neighbors[neighbors.length-1], queryPoint))
+
     return this.convertToCoordsObjects(neighbors);
   }
 
@@ -66,7 +70,7 @@ class KDTree {
   }
 
   distance(pointA, pointB) {
-    return Math.sqrt((pointA[0] - pointB[0]) ** 2 + (pointA[1] - pointB[1]) ** 2); // Euclidean distance for 2D points
+    return 6371e3 * Math.acos(Math.cos(pointA[0] * Math.PI / 180) * Math.cos(pointB[0] * Math.PI / 180) * Math.cos((pointB[1] - pointA[1]) * Math.PI / 180) + Math.sin(pointA[0] * Math.PI / 180) * Math.sin(pointB[0] * Math.PI / 180));
   }
   convertToCoordsObjects(points) {
     return points.map(point => ({

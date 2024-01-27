@@ -214,7 +214,7 @@ setIsLoading(false);
     const legs = response.data.data.plan.itineraries[0].legs;
     let durationInMinutes = (response.data.data.plan.itineraries[0].endTime - response.data.data.plan.itineraries[0].startTime) / (1000 * 60);
     setRouteTime(prevRouteTime => prevRouteTime + Math.round(durationInMinutes));
-
+    console.log("duration",durationInMinutes)
     if (travelType == "BICYCLE") {
       console.log("setting bike time 1.")
       setBikeTime(Math.round(durationInMinutes))

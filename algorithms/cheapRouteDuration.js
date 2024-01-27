@@ -15,7 +15,8 @@ import  KDTree  from './kdtree.js';
 let routeDuration = 0;
 function distance(pointA, pointB) {
     return new Promise(resolve => {
-        const dist = Math.sqrt((pointA[0] - pointB[0]) ** 2 + (pointA[1] - pointB[1]) ** 2);
+        const dist = 6371e3 * Math.acos(Math.cos(pointA[0] * Math.PI / 180) * Math.cos(pointB[0] * Math.PI / 180) * Math.cos((pointB[1] - pointA[1]) * Math.PI / 180) + Math.sin(pointA[0] * Math.PI / 180) * Math.sin(pointB[0] * Math.PI / 180));
+
         resolve(dist);
     });
 }
