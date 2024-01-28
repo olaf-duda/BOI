@@ -1,3 +1,6 @@
+import { shadowBase64, redBase64, greenBase64, blueBase64 } from '../base64Images.js'
+
+
 const html_script = `
 
 <!DOCTYPE html>
@@ -48,6 +51,44 @@ const html_script = `
 
 	const marker = L.marker([51.5, -0.09]).addTo(map)
 		.bindPopup('<b>Hello world!</b><br />I am a popup.').openPopup();
+
+	var LeafIcon = L.Icon.extend({
+		options: {
+			shadowUrl: '` + shadowBase64 + `',
+			iconSize:     [44, 44],
+			shadowSize:   [44, 44],
+			iconAnchor:   [22, 44],
+			shadowAnchor: [22, 44],
+			popupAnchor:  [-3, -76]
+		}
+		});
+		
+	var greenIcon = new LeafIcon({iconUrl: '` + greenBase64 + `'}),
+		redIcon = new LeafIcon({iconUrl: '` + redBase64 + `'}),
+		blueIcon = new LeafIcon({iconUrl: '` + blueBase64 + `'});
+			
+	function setCustomMarker(latitude, longitude, iconType, addressInfo) {
+		if (typeof map !== 'undefined') {
+			map.setView([latitude, longitude], 13);
+		
+			var v_icon;
+			var v_popup;
+			if (iconType === 1) {
+				v_icon = redIcon;
+				v_popup = '<b>Destination point</b> <br/> '
+			} else if (iconType === 2) {
+				v_icon = greenIcon;
+			v_popup = '<b>Starting point</b> <br/> '
+			} else if (iconType === 3) {
+				v_icon = blueIcon;
+				v_popup = '<b>Transition station</b> <br/> '
+			}
+	
+			v_popup = v_popup + addressInfo;
+			L.marker([latitude, longitude], {icon: v_icon}).addTo(map).bindPopup(v_popup);
+			
+	}
+}
 
 	const circle = L.circle([51.2297, 21.0122], {
 		color: 'red',

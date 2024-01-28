@@ -19,7 +19,7 @@ import '../../global.js'
 
 export default function TabTwoScreen() {
   const [isFreeRouteEnabled, setIsEnabled] = useState(false);
-const [isLoadingSpinner, setIsLoading] = useState(false);
+  const [isLoadingSpinner, setIsLoading] = useState(false);
   const [routeCost, setRouteCost] = useState(-1);
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
   const [startingAddress, setStartingAddress] = useState('');
@@ -39,28 +39,28 @@ const [isLoadingSpinner, setIsLoading] = useState(false);
   const handleBalancedRoute = async () => {
     setIsLoading(true);
     setSelectedRoute("TRIANGLE");
-await findRoute("TRIANGLE");
+    await findRoute("TRIANGLE");
     setIsLoading(false);
   }
 
   const handleFastRoute = async () => {
     setIsLoading(true);
     setSelectedRoute("QUICK");
-await findRoute("QUICK");
+    await findRoute("QUICK");
     setIsLoading(false);
   }
 
   const handleSafeRoute = async () => {
     setIsLoading(true);
     setSelectedRoute("SAFE");
-await findRoute("SAFE");
+    await findRoute("SAFE");
     setIsLoading(false);
   }
 
   const handleFlatRoute = async () => {
     setIsLoading(true);
     setSelectedRoute("FLAT");
-await findRoute("FLAT");
+    await findRoute("FLAT");
     setIsLoading(false);
   }
 
@@ -107,7 +107,7 @@ await findRoute("FLAT");
   };
 
   const handleStartingAddressSubmit = useCallback(async () => {
-setIsLoading(true);
+    setIsLoading(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(startingAddress)}`
@@ -116,16 +116,16 @@ setIsLoading(true);
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         setStartingCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        addNewMarker(parseFloat(lat), parseFloat(lon), true);
+        addNewMarker(parseFloat(lat), parseFloat(lon), 2, `${startingAddress}`);
       }
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
-setIsLoading(false);
+    setIsLoading(false);
   }, [startingAddress]);
 
   const handleDestinationAddressSubmit = useCallback(async () => {
-setIsLoading(true);
+    setIsLoading(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destinationAddress)}`
@@ -134,17 +134,17 @@ setIsLoading(true);
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         setDestinationCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        addNewMarker(parseFloat(lat), parseFloat(lon), false);
+        addNewMarker(parseFloat(lat), parseFloat(lon), 1, `${destinationAddress}`);
       }
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
-setIsLoading(false);
+    setIsLoading(false);
 
   }, [destinationAddress]);
 
   const handleSetStartingLocation = async () => {
-setIsLoading(true);
+    setIsLoading(true);
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -156,11 +156,11 @@ setIsLoading(true);
       const { latitude, longitude } = location.coords;
       setStartingCoordinates({ lat: latitude, lon: longitude });
       setStartingAddress("Your localization")
-      addNewMarker(latitude, longitude, true);
+      addNewMarker(latitude, longitude, 2, "Your localisation");
     } catch (error) {
       console.error('Error getting location:', error);
     }
-setIsLoading(false);
+    setIsLoading(false);
   };
 
   const findRoute = async (bicycleRouteType: string) => {
@@ -186,11 +186,11 @@ setIsLoading(false);
           await otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
           await otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
 
-        addNewMarker(startingCoordinates.lat, startingCoordinates.lon, true);
-        addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, false);
-        addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, false);
-        addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, false);
-}
+          addNewMarker(startingCoordinates.lat, startingCoordinates.lon, 2, `${startingAddress}`);
+          addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, 3, '');
+          addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, 3, '');
+          addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, 1, `${destinationAddress}`);
+        }
 
       }
       return 1;
@@ -218,7 +218,7 @@ setIsLoading(false);
     if (travelType == "BICYCLE") {
       console.log("setting bike time 1.")
       setBikeTime(Math.round(durationInMinutes))
-    SettleCostTime(Math.round(durationInMinutes));
+      SettleCostTime(Math.round(durationInMinutes));
     }
     else if (isDestinationWalk) {
       setWalk2Time(Math.round(durationInMinutes))
@@ -242,7 +242,7 @@ setIsLoading(false);
     }
     else if (isFreeRouteEnabled) {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
-const [CRO1, CRO2] = cheapRouteOutput;
+      const [CRO1, CRO2] = cheapRouteOutput;
       if (CRO2 == -1) {
         const title = "Warning"
         const message = "We're sorry, but the route you tried to find is impossible to traverse without additional payment. If you still want to know the route, unselect the \"Free route\" mode."
@@ -258,25 +258,25 @@ const [CRO1, CRO2] = cheapRouteOutput;
       let points = cheapRouteOutput[0] as number[][][]
       let routeDuration = cheapRouteOutput[1] as number
       console.log("route duration" + routeDuration)
-console.log("setting bike time 2.")
+      console.log("setting bike time 2.")
       setBikeTime(Math.round(routeDuration))
-SettleCostTime(Math.round(routeDuration));
+      SettleCostTime(Math.round(routeDuration));
 
       drawLineBetweenPoints(startingCoordinates.lon, startingCoordinates.lat, points[0][0][0], points[0][0][1], color);
-      for (let j = 0; j < points.length; j++) { 
+      for (let j = 0; j < points.length; j++) {
         for (let i = 0; i < points[j].length - 1; i++) {
           const [lat1, lon1] = points[j][i];
           const [lat2, lon2] = points[j][i + 1];
           drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
         if (j !== points.length - 1)
-          addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], false)
-      }   
+          addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], 3, '')
+      }
     }
     else {
 
     }
-return 0;
+    return 0;
   }
 
   const clearMap = () => {
@@ -308,27 +308,9 @@ return 0;
     }
   }
 
-  const addNewMarker = (lat: number, lon: number, isStarting: boolean) => {
+  const addNewMarker = (lat: number, lon: number, markerType: number, addressInfo: string) => {
     if (mapRef.current) {
-      let script = '';
-      if (isStarting == true) {
-        script = `
-        if (typeof map !== 'undefined') {
-          map.setView([${lat}, ${lon}], 13);
-          L.marker([${lat}, ${lon}]).addTo(map).bindPopup('<b>Starting point</b> <br/> ${startingAddress}');
-          
-        }
-      `;
-      }
-      else {
-        script = `
-        if (typeof map !== 'undefined') {
-          map.setView([${lat}, ${lon}], 13);
-          L.marker([${lat}, ${lon}]).addTo(map).bindPopup('<b>Destination point</b> <br/> ${destinationAddress}');
-          
-        }
-      `;
-      }
+      let script = `setCustomMarker(${lat}, ${lon}, ${markerType}, '${addressInfo}');`;
       mapRef.current.injectJavaScript(script);
     }
   };
@@ -337,7 +319,7 @@ return 0;
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
-{isLoadingSpinner && (
+        {isLoadingSpinner && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color="#0000ff" />
           </View>
@@ -381,37 +363,37 @@ return 0;
             <Text style={styles.durationText}>
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
               {walk1Time} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="directions-bike" size={24} color="#36aa12" />
-              {' '} 
+              {' '}
               {bikeTime} min
-              {'  '} 
+              {'  '}
 
               <MaterialIcons name="double-arrow" size={24} color="#36aa12" />
               <MaterialIcons name="directions-walk" size={24} color="#36aa12" />
 
               {walk2Time} min
 
-              </Text>
+            </Text>
           )}
         </View>
         <View style={{ flex: 0.5, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
           <View style={{ height: 7 }}></View>
-<View style={styles.splitContainer}>
+          <View style={styles.splitContainer}>
             <View style={styles.leftContainer}>
-          <Text style={styles.label}>Free route mode:</Text>
-          <Switch
-            trackColor={{ false: "#767577", true: "#77ee44" }}
-            thumbColor={isFreeRouteEnabled ? "#339933" : "#f4f3f4"}
-            ios_backgroundColor="#3e3e3e"
-            onValueChange={toggleSwitch}
-            value={isFreeRouteEnabled}
-          />
-</View>
+              <Text style={styles.label}>Free route mode:</Text>
+              <Switch
+                trackColor={{ false: "#767577", true: "#77ee44" }}
+                thumbColor={isFreeRouteEnabled ? "#339933" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleSwitch}
+                value={isFreeRouteEnabled}
+              />
+            </View>
             <View style={styles.rightContainer}>
               <Text style={styles.label}>Cost of your route:</Text>
               <Text style={[routeCost == 0 ? styles.rightText : styles.label]}>
@@ -468,7 +450,7 @@ const styles = StyleSheet.create({
   selectedText: {
     color: 'black'
   },
-overlay: {
+  overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',

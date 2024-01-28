@@ -3,11 +3,11 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "test": "jest"
+    "start": "node convertImagesToBase64.js && expo start",
+    "android": "node convertImagesToBase64.js && expo start --android",
+    "ios": "node convertImagesToBase64.js && expo start --ios",
+    "web": "node convertImagesToBase64.js && expo start --web",
+    "test": "node convertImagesToBase64.js && jest"
   },
   "jest": {
     "preset": "jest-expo",
@@ -26,7 +26,7 @@
     "expo-file-system": "~15.4.5",
     "expo-font": "~11.4.0",
     "expo-linking": "~5.0.2",
-    "expo-location": "^16.3.0",
+    "expo-location": "~16.1.0",
     "expo-router": "^2.0.12",
     "expo-splash-screen": "~0.20.5",
     "expo-status-bar": "~1.6.0",
