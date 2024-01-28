@@ -8,7 +8,7 @@ import html_script from '../html_script.js';
 import useBikeStationList from '../../hook/bikeData.js';
 
 import Station from '../../interfaces/Stations.js'
-import  KDTree  from '../../algorithms/kdtree.js';
+import KDTree from '../../algorithms/kdtree.js';
 import { createRequest } from '../../algorithms/createRequest.js'
 import { CheapRoute } from '../../algorithms/cheapRoute.js'
 import { decode } from '../../algorithms/polyline.js'
@@ -17,7 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 const { StorageAccessFramework } = FileSystem;
 export default function TabFourScreen() {
-  const {bikeStations, isLoading, error, fetchData} = useBikeStationList();
+  const { bikeStations, isLoading, error, fetchData } = useBikeStationList();
   const [anchorAddress, setAnchorAddress] = useState('');
   const [anchorCoordinates, setAnchorCoordinates] = useState({ lat: 52.2297, lon: 21.0122 });
 
@@ -51,57 +51,57 @@ export default function TabFourScreen() {
 
         let centreStationCoordinates: [number, number] = [0, 0];
         bikeStations.find((station: Station) => {
-            if (station.name === 'Metro Centrum') {
-                centreStationCoordinates = [station.geoCoords.lat, station.geoCoords.lng];
-              console.log("znalazlo centrum " + centreStationCoordinates)
+          if (station.name === 'Metro Centrum') {
+            centreStationCoordinates = [station.geoCoords.lat, station.geoCoords.lng];
+            console.log("znalazlo centrum " + centreStationCoordinates)
 
-                return true;
-            }
-            return false;
+            return true;
+          }
+          return false;
         });
 
-        
+
 
         const kdTree = new KDTree(stationCoordinates);
-        if(anchorCoordinates) {
+        if (anchorCoordinates) {
           const nearestAnchorStation = kdTree.findNearestNeighbors([anchorCoordinates.lat, anchorCoordinates.lon], 1);
           centreStationCoordinates = [nearestAnchorStation[0].lat, nearestAnchorStation[0].lon]
         }
         let previous_stations: number[] = [];
         let contentNormal = ""
-        for(let i = 0; i < stationCoordinates.length-1; i++){
-            
-            let secondIndex = Math.floor(Math.random()*stationCoordinates.length);
-            
-            while(previous_stations.includes(secondIndex) || (centreStationCoordinates[0] == stationCoordinates[secondIndex][0] && centreStationCoordinates[1] == stationCoordinates[secondIndex][1])) 
-              secondIndex = Math.floor(Math.random()*stationCoordinates.length);
+        for (let i = 0; i < stationCoordinates.length - 1; i++) {
 
-            previous_stations.push(secondIndex);
-            
-            console.log('iteration number: ' + i + " " + stationCoordinates[secondIndex] );
-            console.log(centreStationCoordinates , stationCoordinates[secondIndex])
-            contentNormal = await otpFindRoute("BICYCLE", "QUICK", {lat: centreStationCoordinates[0], lon: centreStationCoordinates[1]},
-                    {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+          let secondIndex = Math.floor(Math.random() * stationCoordinates.length);
+
+          while (previous_stations.includes(secondIndex) || (centreStationCoordinates[0] == stationCoordinates[secondIndex][0] && centreStationCoordinates[1] == stationCoordinates[secondIndex][1]))
+            secondIndex = Math.floor(Math.random() * stationCoordinates.length);
+
+          previous_stations.push(secondIndex);
+
+          console.log('iteration number: ' + i + " " + stationCoordinates[secondIndex]);
+          console.log(centreStationCoordinates, stationCoordinates[secondIndex])
+          contentNormal = await otpFindRoute("BICYCLE", "QUICK", { lat: centreStationCoordinates[0], lon: centreStationCoordinates[1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, false);
 
 
-            const numberRegex = /\b\d+\b/;
+          const numberRegex = /\b\d+\b/;
 
-            const match = contentNormal.match(numberRegex);
+          const match = contentNormal.match(numberRegex);
 
-            // Check if a match is found
-            let value = 0;
+          // Check if a match is found
+          let value = 0;
 
-            if (match) {
-                value = parseInt(match[0], 10); // Convert the matched string to an integer
-                console.log("Extracted value:", value);
-            } else {
-                console.log("No number found in the string.");
-            }
-            
-            let color = valueToHeatmapColor(value);
-            console.log(color)
-            if (mapRef.current) {
-              const script = `
+          if (match) {
+            value = parseInt(match[0], 10); // Convert the matched string to an integer
+            console.log("Extracted value:", value);
+          } else {
+            console.log("No number found in the string.");
+          }
+
+          let color = valueToHeatmapColor(value);
+          console.log(color)
+          if (mapRef.current) {
+            const script = `
                   if (typeof map !== 'undefined') {
                   L.circle([${stationCoordinates[secondIndex][0]}, ${stationCoordinates[secondIndex][1]}], {
                     color: '${color.toString()}',
@@ -110,10 +110,10 @@ export default function TabFourScreen() {
                   }).addTo(map);
                   }
               `;
-              //console.log("Station at:" + lat + " " + lng + "\n");
-              mapRef.current.injectJavaScript(script);
-            }
-           
+            //console.log("Station at:" + lat + " " + lng + "\n");
+            mapRef.current.injectJavaScript(script);
+          }
+
         }
       }
       return 1;
@@ -130,7 +130,7 @@ export default function TabFourScreen() {
       // 2x wykresy po 4 linie (odleglosc miedzy stacjami) / (duration miedzy stacjami)
       // mapa ciepła duration punktów do pałacu kultury
       // mapa ciepła punktów do nabliższej stacji veturilo
-      
+
       setRouteTime(0);
       setWalk1Time(0);
       setBikeTime(0);
@@ -147,42 +147,42 @@ export default function TabFourScreen() {
         let previous_pairs: number[][] = [[]];
         let contentNormal = ""
         let contentCheap = ""
-        for(let i = 0; i < stationCoordinates.length; i++){
-            const firstIndex = i;
-            let secondIndex = Math.floor(Math.random()*stationCoordinates.length);
-            
-            while(secondIndex == firstIndex || previous_pairs.includes([Math.min(firstIndex, secondIndex), Math.max(firstIndex, secondIndex)])) 
-              secondIndex = Math.floor(Math.random()*stationCoordinates.length);
+        for (let i = 0; i < stationCoordinates.length; i++) {
+          const firstIndex = i;
+          let secondIndex = Math.floor(Math.random() * stationCoordinates.length);
+
+          while (secondIndex == firstIndex || previous_pairs.includes([Math.min(firstIndex, secondIndex), Math.max(firstIndex, secondIndex)]))
+            secondIndex = Math.floor(Math.random() * stationCoordinates.length);
 
           previous_pairs.push([Math.min(firstIndex, secondIndex), Math.max(firstIndex, secondIndex)]);
-          
-          console.log('iteration number: ' + i + ': ' + stationCoordinates[firstIndex] + ' and ' + stationCoordinates[secondIndex] );
-          contentNormal += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+
+          console.log('iteration number: ' + i + ': ' + stationCoordinates[firstIndex] + ' and ' + stationCoordinates[secondIndex]);
+          contentNormal += await otpFindRoute("BICYCLE", "TRIANGLE", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, false);
 
           console.log('(BALANCED) size of Content Normal is: ' + contentNormal.length);
-          contentNormal += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+          contentNormal += await otpFindRoute("BICYCLE", "QUICK", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, false);
 
           console.log('(QUICK) size of Content Normal is: ' + contentNormal.length);
-          contentNormal += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+          contentNormal += await otpFindRoute("BICYCLE", "FLAT", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, false);
 
           console.log('(FLAT) size of Content Normal is: ' + contentNormal.length);
-          contentNormal += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, false);
+          contentNormal += await otpFindRoute("BICYCLE", "SAFE", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, false);
 
           console.log('(SAFE) size of Content Normal is: ' + contentNormal.length);
-          
-          contentCheap += await otpFindRoute("BICYCLE", "TRIANGLE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
-          contentCheap += await otpFindRoute("BICYCLE", "QUICK", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
-          contentCheap += await otpFindRoute("BICYCLE", "FLAT", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
-          contentCheap += await otpFindRoute("BICYCLE", "SAFE", {lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1]},
-                  {lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1]}, "blue", kdTree, true);
-          
+
+          contentCheap += await otpFindRoute("BICYCLE", "TRIANGLE", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, true);
+          contentCheap += await otpFindRoute("BICYCLE", "QUICK", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, true);
+          contentCheap += await otpFindRoute("BICYCLE", "FLAT", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, true);
+          contentCheap += await otpFindRoute("BICYCLE", "SAFE", { lat: stationCoordinates[firstIndex][0], lon: stationCoordinates[firstIndex][1] },
+            { lat: stationCoordinates[secondIndex][0], lon: stationCoordinates[secondIndex][1] }, "blue", kdTree, true);
+
           console.log('(SAFE) size of Content Cheap is: ' + contentCheap.length);
         }
 
@@ -191,29 +191,29 @@ export default function TabFourScreen() {
         if (permissionsNormal.granted) {
           let directoryUri = permissionsNormal.directoryUri;
           let fileName = "NormalData";
-          await StorageAccessFramework.createFileAsync(directoryUri, fileName, "text/plain").then(async(fileUri) => {
-                await FileSystem.writeAsStringAsync(fileUri, contentNormal, { encoding: FileSystem.EncodingType.UTF8 });
+          await StorageAccessFramework.createFileAsync(directoryUri, fileName, "text/plain").then(async (fileUri) => {
+            await FileSystem.writeAsStringAsync(fileUri, contentNormal, { encoding: FileSystem.EncodingType.UTF8 });
           })
-          .catch((e) => {
-            console.log(e);
-          });
+            .catch((e) => {
+              console.log(e);
+            });
 
         }
         else {
           alert("You must allow permission to save.")
         }
-      
+
         const permissionsCheap = await StorageAccessFramework.requestDirectoryPermissionsAsync();
         // Check if permission granted
         if (permissionsCheap.granted) {
           let directoryUri = permissionsCheap.directoryUri;
           let fileName = "CheapData";
-          await StorageAccessFramework.createFileAsync(directoryUri, fileName, "text/plain").then(async(fileUri) => {
-                await FileSystem.writeAsStringAsync(fileUri, contentCheap, { encoding: FileSystem.EncodingType.UTF8 });
+          await StorageAccessFramework.createFileAsync(directoryUri, fileName, "text/plain").then(async (fileUri) => {
+            await FileSystem.writeAsStringAsync(fileUri, contentCheap, { encoding: FileSystem.EncodingType.UTF8 });
           })
-          .catch((e) => {
-            console.log(e);
-          });
+            .catch((e) => {
+              console.log(e);
+            });
 
         }
         else {
@@ -246,25 +246,25 @@ export default function TabFourScreen() {
     setBikeTime(Math.round(durationInMinutes))
     let distance = Math.round(calculateHaversineDistance(startingCoordinates, destinationCoordinates));
 
-    if(durationInMinutes <=17 || !isFreeRouteEnabled ){
-      returnContent = await bicycleRouteType + isFreeRouteEnabled + ' ' + durationInMinutes + ' ' + distance + '\n'; 
+    if (durationInMinutes <= 17 || !isFreeRouteEnabled) {
+      returnContent = await bicycleRouteType + isFreeRouteEnabled + ' ' + durationInMinutes + ' ' + distance + '\n';
     }
-    else if (isFreeRouteEnabled){
+    else if (isFreeRouteEnabled) {
       const cheapRouteOutput = await CheapRoute(startingCoordinates, destinationCoordinates, durationInMinutes, kdTree, bicycleRouteType);
       let time = cheapRouteOutput[1] as number
-      if(time == -1){
-          console.log("Found non-existent route");
-          return bicycleRouteType + ' ' + 'NaN' + ' ' + distance + '\n'; 
+      if (time == -1) {
+        console.log("Found non-existent route");
+        return bicycleRouteType + ' ' + 'NaN' + ' ' + distance + '\n';
       }
 
-        returnContent = await bicycleRouteType + ' ' + Math.round(time) + ' ' + distance + '\n'; 
+      returnContent = await bicycleRouteType + ' ' + Math.round(time) + ' ' + distance + '\n';
     }
 
     console.log("finished writing in the data");
     return returnContent;
   }
-  
-  const handleStationAddress = useCallback( () => {
+
+  const handleStationAddress = useCallback(() => {
     console.log("starting the loop")
     if (bikeStations && bikeStations.length > 0) {
       // Preprocess stations to extract only coordinates
@@ -274,77 +274,71 @@ export default function TabFourScreen() {
       ]);
       // Create KD-tree with station coordinates
       const kdTree = new KDTree(stationCoordinates);
-      
+
 
 
     }
   }, [bikeStations]);
 
-  
+
   useEffect(() => {
     handleStationAddress();
   }, [bikeStations])
 
   function degreesToRadians(degrees: number) {
     return degrees * Math.PI / 180;
-}
+  }
 
-function calculateHaversineDistance(startingCoordinates: { lat: number; lon: number; }, destinationCoordinates: { lat: number; lon: number; }) {
+  function calculateHaversineDistance(startingCoordinates: { lat: number; lon: number; }, destinationCoordinates: { lat: number; lon: number; }) {
     const earthRadius = 6371000; // Earth's radius in meters
 
     const dLat = degreesToRadians(destinationCoordinates.lat - startingCoordinates.lat);
     const dLon = degreesToRadians(destinationCoordinates.lon - startingCoordinates.lon);
 
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(degreesToRadians(startingCoordinates.lat)) * Math.cos(degreesToRadians(destinationCoordinates.lat)) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(degreesToRadians(startingCoordinates.lat)) * Math.cos(degreesToRadians(destinationCoordinates.lat)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     const distance = earthRadius * c;
 
     return distance;
-}
-function valueToHeatmapColor(value: number) {
-  // Normalize the value to the range [0, 1]
-  const normalizedValue = Math.min(Math.max(value / 80, 0), 1);
+  }
+  function valueToHeatmapColor(value: number) {
+    const normalizedValue = Math.min(Math.max(value / 80, 0), 1);
 
-  // Set the hue based on the normalized value
-  const hue = (normalizedValue - 1) * 240; // 0 (blue) to 240 (red)
+    const hue = (normalizedValue) * 240; // 0 (red) to 240 (green)
 
-  // Set saturation value
-  const saturation = 90; // 0 to 100
+    const saturation = 90; // 0 to 100
 
-  // Adjust lightness dynamically for a gradient effect
-  const lightness = 40; // Adjust the range for desired darkness
+    const lightness = 40;
 
-  // Convert HSL to RGB
-  const rgbColor = hslToRgb(hue, saturation, lightness);
+    const rgbColor = hslToRgb(hue, saturation, lightness);
 
-  // Convert RGB to hexadecimal color
-  const hexColor = rgbToHex(rgbColor);
+    const hexColor = rgbToHex(rgbColor);
 
-  return hexColor;
-}
+    return hexColor;
+  }
 
-// Helper function to convert HSL to RGB
-function hslToRgb(h: number, s: number, l: number) {
-  h /= 360;
-  s /= 100;
-  l /= 100;
+  // Helper function to convert HSL to RGB
+  function hslToRgb(h: number, s: number, l: number) {
+    h /= 360;
+    s /= 100;
+    l /= 100;
 
-  let r, g, b;
+    let r, g, b;
 
-  if (s === 0) {
+    if (s === 0) {
       r = g = b = l; // achromatic
-  } else {
+    } else {
       const hue2rgb = function hue2rgb(p: number, q: number, t: number) {
-          if (t < 0) t += 1;
-          if (t > 1) t -= 1;
-          if (t < 1 / 6) return p + (q - p) * 6 * t;
-          if (t < 1 / 2) return q;
-          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-          return p;
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
       };
 
       const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
@@ -353,10 +347,10 @@ function hslToRgb(h: number, s: number, l: number) {
       r = hue2rgb(p, q, h + 1 / 3);
       g = hue2rgb(p, q, h);
       b = hue2rgb(p, q, h - 1 / 3);
-  }
+    }
 
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
 
   // Helper function to convert RGB to hexadecimal
   function rgbToHex(rgb: any[]) {
@@ -402,12 +396,12 @@ function hslToRgb(h: number, s: number, l: number) {
     }
   }, [anchorAddress]);
 
-return (
-  <>
-    <StatusBar barStyle="dark-content" />
-    <SafeAreaView style={styles.container}>
-      <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} onLoad={handleStationAddress}/>
-      <View style={styles.addressInputContainer}>
+  return (
+    <>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.container}>
+        <WebView ref={mapRef} source={{ html: html_script }} style={styles.webview} onLoad={handleStationAddress} />
+        <View style={styles.addressInputContainer}>
           <TextInput
             style={styles.addressInput}
             onChangeText={setAnchorAddress}
@@ -420,23 +414,23 @@ return (
             </Text>
           </TouchableOpacity>
         </View>
-      <View style={styles.buttonArea}>
-            <TouchableOpacity
-              style={[styles.button]}
-              onPress={handleDataCollection}
-            >
-              <Text style={[styles.buttonText]}>Save statistics</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button]}
-              onPress={handleCentreHeatMap}
-            >
-              <Text style={[styles.buttonText]}>Heat map to centre</Text>
-            </TouchableOpacity>
+        <View style={styles.buttonArea}>
+          <TouchableOpacity
+            style={[styles.button]}
+            onPress={handleDataCollection}
+          >
+            <Text style={[styles.buttonText]}>Save statistics</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button]}
+            onPress={handleCentreHeatMap}
+          >
+            <Text style={[styles.buttonText]}>Heat map to centre</Text>
+          </TouchableOpacity>
         </View>
-    </SafeAreaView>
-  </>
-);
+      </SafeAreaView>
+    </>
+  );
 };
 
 const styles = StyleSheet.create({

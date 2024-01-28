@@ -116,7 +116,7 @@ export default function TabTwoScreen() {
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         setStartingCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        addNewMarker(parseFloat(lat), parseFloat(lon), 2, `${startingAddress}`);
+        addNewMarker(parseFloat(lat), parseFloat(lon), 2, `${startingAddress}`, 0);
       }
     } catch (error) {
       console.error('Error fetching coordinates:', error);
@@ -134,7 +134,7 @@ export default function TabTwoScreen() {
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         setDestinationCoordinates({ lat: parseFloat(lat), lon: parseFloat(lon) });
-        addNewMarker(parseFloat(lat), parseFloat(lon), 1, `${destinationAddress}`);
+        addNewMarker(parseFloat(lat), parseFloat(lon), 1, `${destinationAddress}`, 0);
       }
     } catch (error) {
       console.error('Error fetching coordinates:', error);
@@ -156,12 +156,38 @@ export default function TabTwoScreen() {
       const { latitude, longitude } = location.coords;
       setStartingCoordinates({ lat: latitude, lon: longitude });
       setStartingAddress("Your localization")
-      addNewMarker(latitude, longitude, 2, "Your localisation");
+      addNewMarker(latitude, longitude, 2, "Your localization", 0);
     } catch (error) {
       console.error('Error getting location:', error);
     }
     setIsLoading(false);
   };
+
+  function findCorrespondingStation(lat: number, lon: number): Station | null {
+    // Function to round a number to a specified number of decimal places
+    const roundTo = (num: number, decimalPlaces: number): number => {
+      var p = Math.pow(10, decimalPlaces);
+      return Math.round(num * p) / p;
+    };
+
+    // Determine the number of decimal places in the input coordinates
+    const latDecimalPlaces = lat.toString().split('.')[1]?.length || 0;
+    const lonDecimalPlaces = lon.toString().split('.')[1]?.length || 0;
+
+    var foundStation: Station | null = null;
+
+    bikeStations.forEach((station: Station) => {
+      // Round station coordinates to the same number of decimal places as the input coordinates
+      var stationLat = roundTo(station.geoCoords.lat, latDecimalPlaces);
+      var stationLon = roundTo(station.geoCoords.lng, lonDecimalPlaces);
+
+      if (stationLat === lat && stationLon === lon) {
+        foundStation = station;
+      }
+    });
+
+    return foundStation;
+  }
 
   const findRoute = async (bicycleRouteType: string) => {
     try {
@@ -178,7 +204,17 @@ export default function TabTwoScreen() {
           station.geoCoords.lng,
         ]);
         const kdTree = new KDTree(stationCoordinates);
-        const nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 1);
+        let nearestStartingStation = kdTree.findNearestNeighbors([startingCoordinates.lat, startingCoordinates.lon], 20);
+        for (let iter = 0; iter < nearestStartingStation.length; iter++) {
+          var nearestStartingStationObject = findCorrespondingStation(nearestStartingStation[iter].lat, nearestStartingStation[iter].lon);
+
+          if (nearestStartingStationObject != null && nearestStartingStationObject['bikes']['length'] >= 2) {
+            nearestStartingStation[0] = nearestStartingStation[iter];
+            break;
+          }
+          console.log(`Station ${nearestStartingStationObject?.['name']} was rejected due to not enough bikes.`)
+        }
+
         const nearestDestinationStation = kdTree.findNearestNeighbors([destinationCoordinates.lat, destinationCoordinates.lon], 1);
 
         var result = await otpFindRoute("BICYCLE", bicycleRouteType, nearestStartingStation[0], nearestDestinationStation[0], "blue", kdTree)
@@ -186,10 +222,12 @@ export default function TabTwoScreen() {
           await otpFindRoute("WALK", bicycleRouteType, startingCoordinates, nearestStartingStation[0], "red", kdTree);
           await otpFindRoute("WALK", bicycleRouteType, nearestDestinationStation[0], destinationCoordinates, "red", kdTree);
 
-          addNewMarker(startingCoordinates.lat, startingCoordinates.lon, 2, `${startingAddress}`);
-          addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, 3, '');
-          addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, 3, '');
-          addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, 1, `${destinationAddress}`);
+          addNewMarker(startingCoordinates.lat, startingCoordinates.lon, 2, `${startingAddress}`, 0);
+          let startStationData = findCorrespondingStation(nearestStartingStation[0].lat, nearestStartingStation[0].lon);
+          let finalStationData = findCorrespondingStation(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon);
+          addNewMarker(nearestStartingStation[0].lat, nearestStartingStation[0].lon, 3, `<i>Rent your bike here!</i> <br /> Station name: <b>${startStationData?.['name']}</b> <br /> Number of bikes in the station: <b>${startStationData?.['bikes']['length']}</b>`, 1);
+          addNewMarker(nearestDestinationStation[0].lat, nearestDestinationStation[0].lon, 3, `Station name: <b>${finalStationData?.['name']}</b> <br /> Here, return the bike and reach your destination on foot from now on!`, 3);
+          addNewMarker(destinationCoordinates.lat, destinationCoordinates.lon, 1, `${destinationAddress}`, 0);
         }
 
       }
@@ -269,8 +307,11 @@ export default function TabTwoScreen() {
           const [lat2, lon2] = points[j][i + 1];
           drawLineBetweenPoints(lon1, lat1, lon2, lat2, color);
         }
-        if (j !== points.length - 1)
-          addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], 3, '')
+        if (j !== points.length - 1) {
+          let stationData = findCorrespondingStation(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0]);
+          console.log(`Transition station coordinates from points: (${points[j][points[j].length - 1][1]}, ${points[j][points[j].length - 1][0]})`)
+          addNewMarker(points[j][points[j].length - 1][1], points[j][points[j].length - 1][0], 3, `Station name: <b>${stationData?.['name']}</b> <br />Stop here, return the bike and rent it once again!`, 2)
+        }
       }
     }
     else {
@@ -308,9 +349,9 @@ export default function TabTwoScreen() {
     }
   }
 
-  const addNewMarker = (lat: number, lon: number, markerType: number, addressInfo: string) => {
+  const addNewMarker = (lat: number, lon: number, markerType: number, addressInfo: string, bikeStationInfo: number) => {
     if (mapRef.current) {
-      let script = `setCustomMarker(${lat}, ${lon}, ${markerType}, '${addressInfo}');`;
+      let script = `setCustomMarker(${lat}, ${lon}, ${markerType}, '${addressInfo}', ${bikeStationInfo});`;
       mapRef.current.injectJavaScript(script);
     }
   };

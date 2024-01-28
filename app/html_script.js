@@ -67,7 +67,7 @@ const html_script = `
 		redIcon = new LeafIcon({iconUrl: '` + redBase64 + `'}),
 		blueIcon = new LeafIcon({iconUrl: '` + blueBase64 + `'});
 			
-	function setCustomMarker(latitude, longitude, iconType, addressInfo) {
+	function setCustomMarker(latitude, longitude, iconType, addressInfo, bikeStationInfo) {
 		if (typeof map !== 'undefined') {
 			map.setView([latitude, longitude], 13);
 		
@@ -81,7 +81,18 @@ const html_script = `
 			v_popup = '<b>Starting point</b> <br/> '
 			} else if (iconType === 3) {
 				v_icon = blueIcon;
-				v_popup = '<b>Transition station</b> <br/> '
+				if (bikeStationInfo === 1)
+				{
+					v_popup = '<b>Starting bike station</b> <br/> '
+				}
+				else if (bikeStationInfo === 2)
+				{
+					v_popup = '<b>Transition station</b> <br/> '
+				}
+				else if (bikeStationInfo === 3)
+				{
+					v_popup = '<b>Final bike station</b> <br/> '
+				}
 			}
 	
 			v_popup = v_popup + addressInfo;
