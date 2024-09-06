@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "react_native_boi",
-    "slug": "react_native_boi",
+    "name": "BOI City Bike Navigation",
+    "slug": "BOI_City_Bike_Navigation",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -19,6 +19,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.boi.cityBikeNavigation",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -30,10 +32,19 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "756e3da8-6997-4de4-acf3-6dc5a5ba32c3"
+      }
     }
   }
 }
